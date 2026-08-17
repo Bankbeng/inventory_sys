@@ -38,13 +38,17 @@ type VehicleStock = {
   product?: { product_name: string };
 };
 
+type MovementItem = {
+  productId: string;
+  quantity: string;
+};
+
 type MovementForm = {
   movementType: "in" | "out" | "transfer";
   sourceLocationType: "warehouse" | "vehicle";
   destinationLocationType: "warehouse" | "vehicle";
   staffId: string;
-  productId: string;
-  quantity: string;
+  items: MovementItem[];
   sourceId: string;
   destinationId: string;
 };
@@ -54,8 +58,7 @@ const initialForm: MovementForm = {
   sourceLocationType: "warehouse",
   destinationLocationType: "warehouse",
   staffId: "1",
-  productId: "",
-  quantity: "1",
+  items: [{ productId: "", quantity: "1" }],
   sourceId: "",
   destinationId: "",
 };
@@ -100,7 +103,12 @@ export default function StockPage() {
       setStaff(Array.isArray(staffData) ? staffData : []);
 
       if (productData[0]) {
-        setForm((current) => ({ ...current, productId: String(productData[0].product_id) }));
+        setForm((current) => ({
+          ...current,
+          items: current.items.map((item, index) =>
+            index === 0 ? { ...item, productId: String(productData[0].product_id) } : item,
+          ),
+        }));
       }
 
       if (staffData[0]) {
@@ -124,15 +132,40 @@ export default function StockPage() {
   const sourceOptions: Array<Warehouse | Vehicle> = form.sourceLocationType === "warehouse" ? warehouses : vehicles;
   const destinationOptions: Array<Warehouse | Vehicle> = form.destinationLocationType === "warehouse" ? warehouses : vehicles;
 
+  const addItemRow = () => {
+    setForm((current) => ({
+      ...current,
+      items: [...current.items, { productId: "", quantity: "1" }],
+    }));
+  };
+
+  const updateItemRow = (index: number, field: "productId" | "quantity", value: string) => {
+    setForm((current) => ({
+      ...current,
+      items: current.items.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    }));
+  };
+
+  const removeItemRow = (index: number) => {
+    setForm((current) => ({
+      ...current,
+      items: current.items.length > 1 ? current.items.filter((_, itemIndex) => itemIndex !== index) : current.items,
+    }));
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const productId = Number(form.productId);
-    const quantity = Number(form.quantity);
-    const staffId = Number(form.staffId);
+    const validItems = form.items.filter((item) => {
+      const productId = Number(item.productId);
+      const quantity = Number(item.quantity);
+      return Number.isInteger(productId) && productId > 0 && Number.isFinite(quantity) && quantity > 0;
+    });
 
-    if (!productId || !quantity || quantity <= 0) {
-      setMessage("Please choose a valid product and quantity.");
+    if (validItems.length === 0) {
+      setMessage("Please add at least one valid product and quantity.");
       return;
     }
 
@@ -164,9 +197,11 @@ export default function StockPage() {
         movement_type: form.movementType,
         from_location_type: form.sourceLocationType,
         to_location_type: form.destinationLocationType,
-        staff_id: staffId,
-        product_id: productId,
-        quantity,
+        staff_id: Number(form.staffId),
+        items: validItems.map((item) => ({
+          product_id: Number(item.productId),
+          quantity: Number(item.quantity),
+        })),
       };
 
       if (form.movementType === "in") {
@@ -209,7 +244,7 @@ export default function StockPage() {
       setMessage("Stock movement recorded successfully.");
       setForm((current) => ({
         ...current,
-        quantity: "1",
+        items: [{ productId: current.items[0]?.productId ?? "", quantity: "1" }],
         sourceId: "",
         destinationId: "",
       }));
@@ -226,47 +261,47 @@ export default function StockPage() {
   const destinationLabel = form.destinationLocationType === "warehouse" ? "Warehouse" : "Vehicle";
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-white px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <p className="text-sm uppercase tracking-[0.25em] text-cyan-300">Inventory</p>
-          <h1 className="mt-2 text-3xl font-bold">Stock overview</h1>
+          <p className="text-sm uppercase tracking-[0.25em] text-cyan-600">Inventory</p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900">Stock overview</h1>
         </div>
 
         <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
-            <p className="text-sm text-slate-400">Warehouse stock rows</p>
-            <p className="mt-4 text-3xl font-bold text-cyan-300">{warehouseStocks.length}</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Warehouse stock rows</p>
+            <p className="mt-4 text-3xl font-bold text-cyan-600">{warehouseStocks.length}</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
-            <p className="text-sm text-slate-400">Vehicle stock rows</p>
-            <p className="mt-4 text-3xl font-bold text-violet-300">{vehicleStocks.length}</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Vehicle stock rows</p>
+            <p className="mt-4 text-3xl font-bold text-violet-600">{vehicleStocks.length}</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
-            <p className="text-sm text-slate-400">Low warehouse stock</p>
-            <p className="mt-4 text-3xl font-bold text-amber-300">{warehouseLowStock.length}</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Low warehouse stock</p>
+            <p className="mt-4 text-3xl font-bold text-amber-600">{warehouseLowStock.length}</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
-            <p className="text-sm text-slate-400">Low vehicle stock</p>
-            <p className="mt-4 text-3xl font-bold text-rose-300">{vehicleLowStock.length}</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Low vehicle stock</p>
+            <p className="mt-4 text-3xl font-bold text-rose-600">{vehicleLowStock.length}</p>
           </div>
         </section>
 
-        <section className="mb-8 rounded-2xl border border-white/10 bg-slate-900 p-5">
+        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold">Move stock</h2>
-            <span className="rounded-full bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-300">
+            <h2 className="text-xl font-semibold text-slate-900">Move stock</h2>
+            <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-medium text-cyan-700">
               Inventory transaction
             </span>
           </div>
 
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Movement</span>
               <select
                 value={form.movementType}
                 onChange={(event) => setForm((current) => ({ ...current, movementType: event.target.value as MovementForm["movementType"] }))}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
               >
                 <option value="in">Stock in</option>
                 <option value="out">Stock out</option>
@@ -275,12 +310,12 @@ export default function StockPage() {
             </label>
 
             {(form.movementType === "out" || form.movementType === "transfer") && (
-              <label className="text-sm text-slate-300">
+              <label className="text-sm text-slate-700">
                 <span className="mb-2 block">Source type</span>
                 <select
                   value={form.sourceLocationType}
                   onChange={(event) => setForm((current) => ({ ...current, sourceLocationType: event.target.value as MovementForm["sourceLocationType"], sourceId: "" }))}
-                  className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 >
                   <option value="warehouse">Warehouse</option>
                   <option value="vehicle">Vehicle</option>
@@ -289,12 +324,12 @@ export default function StockPage() {
             )}
 
             {(form.movementType === "in" || form.movementType === "transfer") && (
-              <label className="text-sm text-slate-300">
+              <label className="text-sm text-slate-700">
                 <span className="mb-2 block">Destination type</span>
                 <select
                   value={form.destinationLocationType}
                   onChange={(event) => setForm((current) => ({ ...current, destinationLocationType: event.target.value as MovementForm["destinationLocationType"], destinationId: "" }))}
-                  className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 >
                   <option value="warehouse">Warehouse</option>
                   <option value="vehicle">Vehicle</option>
@@ -302,12 +337,12 @@ export default function StockPage() {
               </label>
             )}
 
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Staff</span>
               <select
                 value={form.staffId}
                 onChange={(event) => setForm((current) => ({ ...current, staffId: event.target.value }))}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
               >
                 {staff.map((member) => (
                   <option key={member.staff_id} value={member.staff_id}>{member.staff_name}</option>
@@ -315,30 +350,61 @@ export default function StockPage() {
               </select>
             </label>
 
-            <label className="text-sm text-slate-300">
-              <span className="mb-2 block">Product</span>
-              <select
-                value={form.productId}
-                onChange={(event) => setForm((current) => ({ ...current, productId: event.target.value }))}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
-              >
-                <option value="">Select product</option>
-                {products.map((product) => (
-                  <option key={product.product_id} value={product.product_id}>{product.product_name}</option>
-                ))}
-              </select>
-            </label>
+            <div className="md:col-span-2 xl:col-span-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-700">Products</span>
+                <button
+                  type="button"
+                  onClick={addItemRow}
+                  className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 transition hover:bg-cyan-100"
+                >
+                  Add item
+                </button>
+              </div>
 
-            <label className="text-sm text-slate-300">
-              <span className="mb-2 block">Quantity</span>
-              <input
-                type="number"
-                min="1"
-                value={form.quantity}
-                onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
-              />
-            </label>
+              <div className="space-y-3">
+                {form.items.map((item, index) => (
+                  <div key={`item-${index}`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.5fr_0.7fr_auto]">
+                    <label className="text-sm text-slate-700">
+                      <span className="mb-2 block">Product</span>
+                      <select
+                        value={item.productId}
+                        onChange={(event) => updateItemRow(index, "productId", event.target.value)}
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
+                      >
+                        <option value="">Select product</option>
+                        {products.map((product) => (
+                          <option key={product.product_id} value={product.product_id}>{product.product_name}</option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="text-sm text-slate-700">
+                      <span className="mb-2 block">Quantity</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(event) => updateItemRow(index, "quantity", event.target.value)}
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
+                      />
+                    </label>
+
+                    <div className="flex items-end">
+                      {form.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeItemRow(index)}
+                          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {(form.movementType === "out" || form.movementType === "transfer") && (
               <label className="text-sm text-slate-300">
@@ -404,52 +470,52 @@ export default function StockPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
+                className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {saving ? "Saving..." : "Record movement"}
               </button>
-              {message && <p className="text-sm text-cyan-300">{message}</p>}
+              {message && <p className="text-sm text-cyan-700">{message}</p>}
             </div>
           </form>
         </section>
 
         {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-slate-300">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">
             Loading stock data...
           </div>
         ) : (
           <div className="grid gap-8 xl:grid-cols-2">
-            <section className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Warehouse stock</h2>
-                <span className="rounded-full bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-300">
+                <h2 className="text-xl font-semibold text-slate-900">Warehouse stock</h2>
+                <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-medium text-cyan-700">
                   {warehouseStocks.length} records
                 </span>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-white/10">
+              <div className="overflow-hidden rounded-xl border border-slate-200">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="bg-slate-800 text-slate-300">
+                  <thead className="bg-slate-100 text-slate-600">
                     <tr>
                       <th className="px-3 py-3 font-medium">Warehouse</th>
                       <th className="px-3 py-3 font-medium">Product</th>
                       <th className="px-3 py-3 font-medium">Quantity</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 bg-slate-950/30">
+                  <tbody className="divide-y divide-slate-200 bg-white">
                     {warehouseStocks.length > 0 ? (
                       warehouseStocks.map((item) => (
                         <tr key={`${item.warehouse_id}-${item.product_id}`} className={item.quantity <= 10 ? "bg-amber-500/5" : ""}>
-                          <td className="px-3 py-3 text-slate-200">{item.warehouse?.warehouse_name ?? `Warehouse ${item.warehouse_id}`}</td>
-                          <td className="px-3 py-3 text-slate-200">{item.product?.product_name ?? `Product ${item.product_id}`}</td>
-                          <td className={`px-3 py-3 font-medium ${item.quantity <= 10 ? "text-amber-300" : "text-emerald-300"}`}>
+                          <td className="px-3 py-3 text-slate-700">{item.warehouse?.warehouse_name ?? `Warehouse ${item.warehouse_id}`}</td>
+                          <td className="px-3 py-3 text-slate-700">{item.product?.product_name ?? `Product ${item.product_id}`}</td>
+                          <td className={`px-3 py-3 font-medium ${item.quantity <= 10 ? "text-amber-700" : "text-emerald-700"}`}>
                             {item.quantity}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={3} className="px-3 py-6 text-center text-slate-400">
+                        <td colSpan={3} className="px-3 py-6 text-center text-slate-500">
                           No warehouse stock available.
                         </td>
                       </tr>
@@ -459,37 +525,37 @@ export default function StockPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Vehicle stock</h2>
-                <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-300">
+                <h2 className="text-xl font-semibold text-slate-900">Vehicle stock</h2>
+                <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
                   {vehicleStocks.length} records
                 </span>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-white/10">
+              <div className="overflow-hidden rounded-xl border border-slate-200">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="bg-slate-800 text-slate-300">
+                  <thead className="bg-slate-100 text-slate-600">
                     <tr>
                       <th className="px-3 py-3 font-medium">Vehicle</th>
                       <th className="px-3 py-3 font-medium">Product</th>
                       <th className="px-3 py-3 font-medium">Quantity</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 bg-slate-950/30">
+                  <tbody className="divide-y divide-slate-200 bg-white">
                     {vehicleStocks.length > 0 ? (
                       vehicleStocks.map((item) => (
                         <tr key={`${item.vehicle_id}-${item.product_id}`} className={item.quantity <= 10 ? "bg-rose-500/5" : ""}>
-                          <td className="px-3 py-3 text-slate-200">{item.vehicle?.vehicle_name ?? `Vehicle ${item.vehicle_id}`}</td>
-                          <td className="px-3 py-3 text-slate-200">{item.product?.product_name ?? `Product ${item.product_id}`}</td>
-                          <td className={`px-3 py-3 font-medium ${item.quantity <= 10 ? "text-rose-300" : "text-emerald-300"}`}>
+                          <td className="px-3 py-3 text-slate-700">{item.vehicle?.vehicle_name ?? `Vehicle ${item.vehicle_id}`}</td>
+                          <td className="px-3 py-3 text-slate-700">{item.product?.product_name ?? `Product ${item.product_id}`}</td>
+                          <td className={`px-3 py-3 font-medium ${item.quantity <= 10 ? "text-rose-700" : "text-emerald-700"}`}>
                             {item.quantity}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={3} className="px-3 py-6 text-center text-slate-400">
+                        <td colSpan={3} className="px-3 py-6 text-center text-slate-500">
                           No vehicle stock available.
                         </td>
                       </tr>

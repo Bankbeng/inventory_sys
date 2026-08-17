@@ -90,45 +90,45 @@ export default function DashboardPage() {
   }));
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-white px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-8 text-slate-300">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-slate-600">
             Loading dashboard data...
           </div>
         ) : (
           <>
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-lg shadow-slate-950/20">
-                <p className="text-sm text-slate-400">Total inventory</p>
-                <p className="mt-4 text-3xl font-bold text-cyan-300">{totalInventory.toLocaleString()}</p>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+                <p className="text-sm text-slate-500">Total inventory</p>
+                <p className="mt-4 text-3xl font-bold text-cyan-600">{totalInventory.toLocaleString()}</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-lg shadow-slate-950/20">
-                <p className="text-sm text-slate-400">Sales total</p>
-                <p className="mt-4 text-3xl font-bold text-emerald-300">${totalSales.toLocaleString()}</p>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+                <p className="text-sm text-slate-500">Sales total</p>
+                <p className="mt-4 text-3xl font-bold text-emerald-600">${totalSales.toLocaleString()}</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-lg shadow-slate-950/20">
-                <p className="text-sm text-slate-400">Open orders</p>
-                <p className="mt-4 text-3xl font-bold text-violet-300">{orders.length}</p>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+                <p className="text-sm text-slate-500">Open orders</p>
+                <p className="mt-4 text-3xl font-bold text-violet-600">{orders.length}</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-lg shadow-slate-950/20">
-                <p className="text-sm text-slate-400">Low stock</p>
-                <p className="mt-4 text-3xl font-bold text-amber-300">{lowStockCount}</p>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+                <p className="text-sm text-slate-500">Low stock</p>
+                <p className="mt-4 text-3xl font-bold text-amber-600">{lowStockCount}</p>
               </div>
             </section>
 
             <section className="mt-8 grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-              <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
                 <div className="mb-5 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Recent sales orders</h2>
-                  <Link href="/sales" className="text-sm text-cyan-300 transition hover:text-cyan-200">
+                  <h2 className="text-xl font-semibold text-slate-900">Recent sales orders</h2>
+                  <Link href="/sales" className="text-sm text-cyan-600 transition hover:text-cyan-700">
                     View all
                   </Link>
                 </div>
 
-                <div className="overflow-hidden rounded-xl border border-white/10">
-                  <table className="min-w-full divide-y divide-slate-700 text-left text-sm">
-                    <thead className="bg-slate-800 text-slate-300">
+                <div className="overflow-hidden rounded-xl border border-slate-200">
+                  <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                    <thead className="bg-slate-100 text-slate-600">
                       <tr>
                         <th className="px-4 py-3 font-medium">Order</th>
                         <th className="px-4 py-3 font-medium">Customer</th>
@@ -136,15 +136,15 @@ export default function DashboardPage() {
                         <th className="px-4 py-3 font-medium">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800 bg-slate-900">
+                    <tbody className="divide-y divide-slate-200 bg-white">
                       {recentOrders.length > 0 ? (
                         recentOrders.map((order) => (
                           <tr key={order.id}>
-                            <td className="px-4 py-3 font-medium text-white">{order.id}</td>
-                            <td className="px-4 py-3 text-slate-300">{order.customer}</td>
-                            <td className="px-4 py-3 text-slate-300">{order.total}</td>
+                            <td className="px-4 py-3 font-medium text-slate-900">{order.id}</td>
+                            <td className="px-4 py-3 text-slate-600">{order.customer}</td>
+                            <td className="px-4 py-3 text-slate-600">{order.total}</td>
                             <td className="px-4 py-3">
-                              <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-medium text-emerald-300">
+                              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
                                 {order.status}
                               </span>
                             </td>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                          <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
                             No sales orders found.
                           </td>
                         </tr>
@@ -162,20 +162,20 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
-                <h2 className="text-xl font-semibold">Operational summary</h2>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <h2 className="text-xl font-semibold text-slate-900">Operational summary</h2>
                 <div className="mt-5 space-y-4">
-                  <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4">
-                    <p className="text-sm font-medium text-cyan-300">Products</p>
-                    <p className="mt-1 text-sm text-slate-200">{products.length} tracked products</p>
+                  <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                    <p className="text-sm font-medium text-cyan-700">Products</p>
+                    <p className="mt-1 text-sm text-slate-700">{products.length} tracked products</p>
                   </div>
-                  <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-4">
-                    <p className="text-sm font-medium text-violet-300">Staff</p>
-                    <p className="mt-1 text-sm text-slate-200">{staff.length} active team members</p>
+                  <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                    <p className="text-sm font-medium text-violet-700">Staff</p>
+                    <p className="mt-1 text-sm text-slate-700">{staff.length} active team members</p>
                   </div>
-                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                    <p className="text-sm font-medium text-amber-300">Stock alerts</p>
-                    <p className="mt-1 text-sm text-slate-200">{lowStockCount} entries below the threshold</p>
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-sm font-medium text-amber-700">Stock alerts</p>
+                    <p className="mt-1 text-sm text-slate-700">{lowStockCount} entries below the threshold</p>
                   </div>
                 </div>
               </div>

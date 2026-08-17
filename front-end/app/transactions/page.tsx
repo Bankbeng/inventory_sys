@@ -148,36 +148,36 @@ export default function TransactionsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-white px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <p className="text-sm uppercase tracking-[0.25em] text-cyan-300">Inventory</p>
-          <h1 className="mt-2 text-3xl font-bold">Transaction history</h1>
+          <p className="text-sm uppercase tracking-[0.25em] text-cyan-600">Inventory</p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900">Transaction history</h1>
         </div>
 
-        <section className="mb-8 rounded-2xl border border-white/10 bg-slate-900 p-5">
+        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
             <h2 className="text-xl font-semibold">Transactions</h2>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-slate-400">Filter:</span>
+              <span className="text-sm text-slate-500">Filter:</span>
               <select
                 value={filterType}
                 onChange={(event) => setFilterType(event.target.value)}
-                className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400"
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-400"
               >
                 <option value="all">All transactions</option>
                 <option value="INBOUND">Stock in (Inbound)</option>
                 <option value="OUTBOUND">Stock out (Outbound)</option>
                 <option value="TRANSFER">Transfers</option>
               </select>
-              <span className="rounded-full bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-300">
+              <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-medium text-cyan-700">
                 {filteredTransactions.length} records
               </span>
             </div>
           </div>
 
           {loading ? (
-            <div className="rounded-xl border border-white/10 bg-slate-950 p-6 text-slate-300 text-center">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-slate-600 text-center">
               Loading transaction history...
             </div>
           ) : filteredTransactions.length > 0 ? (
@@ -185,7 +185,7 @@ export default function TransactionsPage() {
               {filteredTransactions.map((transaction) => (
                 <div
                   key={transaction.transaction_id}
-                  className="rounded-xl border border-white/10 bg-slate-950/50 p-4 hover:border-white/20 transition"
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 hover:border-slate-300 transition"
                 >
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <div className="flex-1">
@@ -193,30 +193,30 @@ export default function TransactionsPage() {
                         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getTransactionBadgeColor(transaction.transaction_type)}`}>
                           {transaction.transaction_type}
                         </span>
-                        <span className="text-sm text-slate-400">
+                        <span className="text-sm text-slate-500">
                           Transaction #{transaction.transaction_id}
                         </span>
                       </div>
-                      <p className="text-slate-200 text-sm">
+                      <p className="text-slate-700 text-sm">
                         {getTransactionDescription(transaction)}
                       </p>
                     </div>
-                    <div className="text-right text-sm text-slate-400">
+                    <div className="text-right text-sm text-slate-500">
                       {formatDateTime(transaction.date_time)}
                     </div>
                   </div>
 
                   {transaction.details && transaction.details.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-white/10">
+                    <div className="mt-3 pt-3 border-t border-slate-200">
                       <div className="grid grid-cols-2 gap-4 text-xs">
                         {transaction.details.map((detail, idx) => (
                           <div key={idx} className="space-y-1">
-                            <p className="text-slate-400">Product</p>
-                            <p className="text-cyan-300 font-medium">
+                            <p className="text-slate-500">Product</p>
+                            <p className="text-cyan-700 font-medium">
                               {getProductName(detail.product_id)}
                             </p>
-                            <p className="text-slate-400 mt-2">Quantity</p>
-                            <p className="text-emerald-300 font-medium">{detail.quantity} units</p>
+                            <p className="text-slate-500 mt-2">Quantity</p>
+                            <p className="text-emerald-700 font-medium">{detail.quantity} units</p>
                           </div>
                         ))}
                       </div>
@@ -226,26 +226,26 @@ export default function TransactionsPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-white/10 bg-slate-950 p-6 text-slate-400 text-center">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-slate-500 text-center">
               No transactions found.
             </div>
           )}
         </section>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
-            <p className="text-sm text-slate-400">Total transactions</p>
-            <p className="mt-4 text-3xl font-bold text-cyan-300">{transactions.length}</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Total transactions</p>
+            <p className="mt-4 text-3xl font-bold text-cyan-600">{transactions.length}</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
-            <p className="text-sm text-slate-400">Stock movements (in + out)</p>
-            <p className="mt-4 text-3xl font-bold text-emerald-300">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Stock movements (in + out)</p>
+            <p className="mt-4 text-3xl font-bold text-emerald-600">
               {transactions.filter((t) => t.transaction_type === "INBOUND" || t.transaction_type === "OUTBOUND").length}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
-            <p className="text-sm text-slate-400">Transfers</p>
-            <p className="mt-4 text-3xl font-bold text-blue-300">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Transfers</p>
+            <p className="mt-4 text-3xl font-bold text-blue-600">
               {transactions.filter((t) => t.transaction_type === "TRANSFER").length}
             </p>
           </div>

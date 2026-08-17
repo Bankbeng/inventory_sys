@@ -151,54 +151,54 @@ export default function StaffPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-white px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-cyan-300">Team</p>
-            <h1 className="mt-2 text-3xl font-bold">Staff management</h1>
+            <p className="text-sm uppercase tracking-[0.25em] text-cyan-600">Team</p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">Staff management</h1>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="mb-6 rounded-2xl border border-white/10 bg-slate-900 p-5">
+        <form onSubmit={handleSubmit} className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Full name</span>
               <input
                 value={form.staff_name}
                 onChange={(event) => handleChange("staff_name", event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none ring-0 transition focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none ring-0 transition focus:border-cyan-400"
                 placeholder="John Smith"
               />
             </label>
 
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Username</span>
               <input
                 value={form.username}
                 onChange={(event) => handleChange("username", event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none ring-0 transition focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none ring-0 transition focus:border-cyan-400"
                 placeholder="john"
               />
             </label>
 
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Password</span>
               <input
                 type="password"
                 value={form.password}
                 onChange={(event) => handleChange("password", event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none ring-0 transition focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none ring-0 transition focus:border-cyan-400"
                 placeholder={editingId ? "Leave blank to keep current" : "********"}
               />
             </label>
 
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Role</span>
               <select
                 value={form.role}
                 onChange={(event) => handleChange("role", event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none transition focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
               >
                 <option value="Manager">Manager</option>
                 <option value="Warehouse Lead">Warehouse Lead</option>
@@ -213,7 +213,7 @@ export default function StaffPage() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saving ? (editingId ? "Updating..." : "Saving...") : editingId ? "Update staff" : "Save staff"}
             </button>
@@ -221,7 +221,7 @@ export default function StaffPage() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/10"
+                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
               >
                 Clear form
               </button>
@@ -229,18 +229,18 @@ export default function StaffPage() {
           </div>
 
           {message && (
-            <p className="mt-4 text-sm text-cyan-300">{message}</p>
+            <p className="mt-4 text-sm text-cyan-700">{message}</p>
           )}
         </form>
 
         {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-slate-300">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">
             Loading staff...
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
-            <table className="min-w-full divide-y divide-slate-700 text-left text-sm">
-              <thead className="bg-slate-800 text-slate-300">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead className="bg-slate-100 text-slate-600">
                 <tr>
                   <th className="px-4 py-3 font-medium">ID</th>
                   <th className="px-4 py-3 font-medium">Name</th>
@@ -249,15 +249,15 @@ export default function StaffPage() {
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-200">
                 {staffMembers.length > 0 ? (
                   staffMembers.map((member) => (
-                    <tr key={member.staff_id} className="hover:bg-slate-800/80">
-                      <td className="px-4 py-3 text-slate-300">#{member.staff_id}</td>
-                      <td className="px-4 py-3 font-medium text-white">{member.staff_name}</td>
-                      <td className="px-4 py-3 text-slate-300">{member.username}</td>
+                    <tr key={member.staff_id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-slate-600">#{member.staff_id}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{member.staff_name}</td>
+                      <td className="px-4 py-3 text-slate-600">{member.username}</td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-300">
+                        <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-medium text-cyan-700">
                           {member.role}
                         </span>
                       </td>
@@ -266,14 +266,14 @@ export default function StaffPage() {
                           <button
                             type="button"
                             onClick={() => handleEdit(member)}
-                            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-slate-200 transition hover:border-cyan-400/60 hover:text-white"
+                            className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:border-cyan-300 hover:text-slate-900"
                           >
                             Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(member.staff_id)}
-                            className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/20"
+                            className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100"
                           >
                             Delete
                           </button>
@@ -283,7 +283,7 @@ export default function StaffPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                    <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
                       No staff records found.
                     </td>
                   </tr>

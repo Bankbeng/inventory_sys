@@ -18,11 +18,11 @@ export default function TopNav() {
   const pathname = usePathname();
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-slate-950/90 backdrop-blur-md">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md">
       <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <Link
           href="/dashboard"
-          className="text-base font-semibold tracking-[0.2em] text-cyan-300 uppercase"
+          className="text-base font-semibold tracking-[0.2em] text-cyan-600 uppercase"
         >
           Inventory
         </Link>
@@ -38,8 +38,8 @@ export default function TopNav() {
                 className={[
                   "rounded-lg px-3 py-2 text-sm font-medium transition",
                   isActive
-                    ? "bg-cyan-500 text-slate-950"
-                    : "bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white",
+                    ? "bg-cyan-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900",
                 ].join(" ")}
               >
                 {item.label}
@@ -49,7 +49,7 @@ export default function TopNav() {
 
           <Link
             href="/login"
-            className="rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-cyan-400/60 hover:text-white"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-cyan-300 hover:text-slate-900"
           >
             Login
           </Link>

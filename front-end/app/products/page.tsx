@@ -149,57 +149,57 @@ export default function ProductsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-white px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-cyan-300">Catalog</p>
-            <h1 className="mt-2 text-3xl font-bold">Products</h1>
+            <p className="text-sm uppercase tracking-[0.25em] text-cyan-600">Catalog</p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">Products</h1>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="mb-6 rounded-2xl border border-white/10 bg-slate-900 p-5">
+        <form onSubmit={handleSubmit} className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Product name</span>
               <input
                 value={form.product_name}
                 onChange={(event) => handleChange("product_name", event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 placeholder="Rice Bag 25kg"
               />
             </label>
 
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Category</span>
               <input
                 value={form.category}
                 onChange={(event) => handleChange("category", event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 placeholder="Staples"
               />
             </label>
 
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Cost price</span>
               <input
                 type="number"
                 step="0.01"
                 value={form.cost_price}
                 onChange={(event) => handleChange("cost_price", event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 placeholder="35.00"
               />
             </label>
 
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Retail price</span>
               <input
                 type="number"
                 step="0.01"
                 value={form.retail_price}
                 onChange={(event) => handleChange("retail_price", event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 placeholder="45.00"
               />
             </label>
@@ -209,7 +209,7 @@ export default function ProductsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saving ? (editingId ? "Updating..." : "Saving...") : editingId ? "Update product" : "Save product"}
             </button>
@@ -217,47 +217,47 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
               >
                 Clear form
               </button>
             )}
           </div>
 
-          {message && <p className="mt-4 text-sm text-cyan-300">{message}</p>}
+          {message && <p className="mt-4 text-sm text-cyan-700">{message}</p>}
         </form>
 
         {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-slate-300">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">
             Loading products...
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {products.map((product) => (
-              <article key={product.product_id} className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+              <article key={product.product_id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-300">
+                  <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
                     {product.category}
                   </span>
-                  <span className="text-xs text-slate-400">#{product.product_id}</span>
+                  <span className="text-xs text-slate-500">#{product.product_id}</span>
                 </div>
-                <h2 className="mt-4 text-xl font-semibold text-white">{product.product_name}</h2>
-                <div className="mt-5 space-y-2 text-sm text-slate-300">
-                  <p>Cost: <span className="font-medium text-white">${Number(product.cost_price).toFixed(2)}</span></p>
-                  <p>Retail: <span className="font-medium text-cyan-300">${Number(product.retail_price).toFixed(2)}</span></p>
+                <h2 className="mt-4 text-xl font-semibold text-slate-900">{product.product_name}</h2>
+                <div className="mt-5 space-y-2 text-sm text-slate-600">
+                  <p>Cost: <span className="font-medium text-slate-900">${Number(product.cost_price).toFixed(2)}</span></p>
+                  <p>Retail: <span className="font-medium text-cyan-700">${Number(product.retail_price).toFixed(2)}</span></p>
                 </div>
                 <div className="mt-5 flex gap-2">
                   <button
                     type="button"
                     onClick={() => handleEdit(product)}
-                    className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-slate-200 transition hover:border-cyan-400/60 hover:text-white"
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:border-cyan-300 hover:text-slate-900"
                   >
                     Edit
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(product.product_id)}
-                    className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/20"
+                    className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100"
                   >
                     Delete
                   </button>

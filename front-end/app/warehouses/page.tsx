@@ -114,23 +114,23 @@ export default function WarehousesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-white px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-cyan-300">Storage</p>
-            <h1 className="mt-2 text-3xl font-bold">Warehouses</h1>
+            <p className="text-sm uppercase tracking-[0.25em] text-cyan-600">Storage</p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">Warehouses</h1>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="mb-6 rounded-2xl border border-white/10 bg-slate-900 p-5">
+        <form onSubmit={handleSubmit} className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Warehouse name</span>
               <input
                 value={form.warehouse_name}
                 onChange={(event) => setForm({ warehouse_name: event.target.value })}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 placeholder="Central Warehouse"
               />
             </label>
@@ -140,7 +140,7 @@ export default function WarehousesPage() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saving ? (editingId ? "Updating..." : "Saving...") : editingId ? "Update warehouse" : "Save warehouse"}
             </button>
@@ -148,45 +148,45 @@ export default function WarehousesPage() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
               >
                 Clear form
               </button>
             )}
           </div>
 
-          {message && <p className="mt-4 text-sm text-cyan-300">{message}</p>}
+          {message && <p className="mt-4 text-sm text-cyan-700">{message}</p>}
         </form>
 
         {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-slate-300">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">
             Loading warehouses...
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {warehouses.map((warehouse) => (
-              <article key={warehouse.warehouse_id} className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+              <article key={warehouse.warehouse_id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-white">{warehouse.warehouse_name}</h2>
-                  <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-medium text-emerald-300">
+                  <h2 className="text-xl font-semibold text-slate-900">{warehouse.warehouse_name}</h2>
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
                     Active
                   </span>
                 </div>
-                <div className="mt-5 space-y-2 text-sm text-slate-300">
-                  <p>ID: <span className="font-medium text-white">#{warehouse.warehouse_id}</span></p>
+                <div className="mt-5 space-y-2 text-sm text-slate-600">
+                  <p>ID: <span className="font-medium text-slate-900">#{warehouse.warehouse_id}</span></p>
                 </div>
                 <div className="mt-5 flex gap-2">
                   <button
                     type="button"
                     onClick={() => handleEdit(warehouse)}
-                    className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-slate-200 transition hover:border-cyan-400/60 hover:text-white"
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:border-cyan-300 hover:text-slate-900"
                   >
                     Edit
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(warehouse.warehouse_id)}
-                    className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/20"
+                    className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100"
                   >
                     Delete
                   </button>
