@@ -1,0 +1,146 @@
+-- CreateTable
+CREATE TABLE `STAFF` (
+    `staff_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `staff_name` VARCHAR(191) NOT NULL,
+    `role` VARCHAR(191) NOT NULL,
+
+    PRIMARY KEY (`staff_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `PRODUCT` (
+    `product_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `product_name` VARCHAR(191) NOT NULL,
+    `category` VARCHAR(191) NOT NULL,
+    `cost_price` DOUBLE NOT NULL,
+    `retail_price` DOUBLE NOT NULL,
+
+    PRIMARY KEY (`product_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `WAREHOUSE` (
+    `warehouse_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `warehouse_name` VARCHAR(191) NOT NULL,
+
+    PRIMARY KEY (`warehouse_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `VEHICLE` (
+    `vehicle_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `vehicle_name` VARCHAR(191) NOT NULL,
+
+    PRIMARY KEY (`vehicle_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `WAREHOUSE_STOCK` (
+    `warehouse_id` INTEGER NOT NULL,
+    `product_id` INTEGER NOT NULL,
+    `quantity` INTEGER NOT NULL,
+
+    PRIMARY KEY (`warehouse_id`, `product_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `VEHICLE_STOCK` (
+    `vehicle_id` INTEGER NOT NULL,
+    `product_id` INTEGER NOT NULL,
+    `quantity` INTEGER NOT NULL,
+
+    PRIMARY KEY (`vehicle_id`, `product_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `INVENTORY_TRANSACTION` (
+    `transaction_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `transaction_type` VARCHAR(191) NOT NULL,
+    `date_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `staff_id` INTEGER NOT NULL,
+    `from_warehouse_id` INTEGER NULL,
+    `to_warehouse_id` INTEGER NULL,
+    `from_vehicle_id` INTEGER NULL,
+    `to_vehicle_id` INTEGER NULL,
+
+    PRIMARY KEY (`transaction_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `TRANSACTION_DETAIL` (
+    `transaction_id` INTEGER NOT NULL,
+    `product_id` INTEGER NOT NULL,
+    `quantity` INTEGER NOT NULL,
+
+    PRIMARY KEY (`transaction_id`, `product_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `SALES_ORDER` (
+    `order_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `order_date` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `salesperson_id` INTEGER NOT NULL,
+    `source_vehicle_id` INTEGER NULL,
+    `source_warehouse_id` INTEGER NULL,
+    `total_amount` DOUBLE NOT NULL,
+
+    PRIMARY KEY (`order_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `SALES_ORDER_DETAIL` (
+    `order_id` INTEGER NOT NULL,
+    `product_id` INTEGER NOT NULL,
+    `quantity_sold` INTEGER NOT NULL,
+    `sold_at_price` DOUBLE NOT NULL,
+
+    PRIMARY KEY (`order_id`, `product_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `WAREHOUSE_STOCK` ADD CONSTRAINT `WAREHOUSE_STOCK_warehouse_id_fkey` FOREIGN KEY (`warehouse_id`) REFERENCES `WAREHOUSE`(`warehouse_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `WAREHOUSE_STOCK` ADD CONSTRAINT `WAREHOUSE_STOCK_product_id_fkey` FOREIGN KEY (`product_id`) REFERENCES `PRODUCT`(`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `VEHICLE_STOCK` ADD CONSTRAINT `VEHICLE_STOCK_vehicle_id_fkey` FOREIGN KEY (`vehicle_id`) REFERENCES `VEHICLE`(`vehicle_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `VEHICLE_STOCK` ADD CONSTRAINT `VEHICLE_STOCK_product_id_fkey` FOREIGN KEY (`product_id`) REFERENCES `PRODUCT`(`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `INVENTORY_TRANSACTION` ADD CONSTRAINT `INVENTORY_TRANSACTION_staff_id_fkey` FOREIGN KEY (`staff_id`) REFERENCES `STAFF`(`staff_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `INVENTORY_TRANSACTION` ADD CONSTRAINT `INVENTORY_TRANSACTION_from_warehouse_id_fkey` FOREIGN KEY (`from_warehouse_id`) REFERENCES `WAREHOUSE`(`warehouse_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `INVENTORY_TRANSACTION` ADD CONSTRAINT `INVENTORY_TRANSACTION_to_warehouse_id_fkey` FOREIGN KEY (`to_warehouse_id`) REFERENCES `WAREHOUSE`(`warehouse_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `INVENTORY_TRANSACTION` ADD CONSTRAINT `INVENTORY_TRANSACTION_from_vehicle_id_fkey` FOREIGN KEY (`from_vehicle_id`) REFERENCES `VEHICLE`(`vehicle_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `INVENTORY_TRANSACTION` ADD CONSTRAINT `INVENTORY_TRANSACTION_to_vehicle_id_fkey` FOREIGN KEY (`to_vehicle_id`) REFERENCES `VEHICLE`(`vehicle_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `TRANSACTION_DETAIL` ADD CONSTRAINT `TRANSACTION_DETAIL_transaction_id_fkey` FOREIGN KEY (`transaction_id`) REFERENCES `INVENTORY_TRANSACTION`(`transaction_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `TRANSACTION_DETAIL` ADD CONSTRAINT `TRANSACTION_DETAIL_product_id_fkey` FOREIGN KEY (`product_id`) REFERENCES `PRODUCT`(`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SALES_ORDER` ADD CONSTRAINT `SALES_ORDER_salesperson_id_fkey` FOREIGN KEY (`salesperson_id`) REFERENCES `STAFF`(`staff_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SALES_ORDER` ADD CONSTRAINT `SALES_ORDER_source_vehicle_id_fkey` FOREIGN KEY (`source_vehicle_id`) REFERENCES `VEHICLE`(`vehicle_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SALES_ORDER` ADD CONSTRAINT `SALES_ORDER_source_warehouse_id_fkey` FOREIGN KEY (`source_warehouse_id`) REFERENCES `WAREHOUSE`(`warehouse_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SALES_ORDER_DETAIL` ADD CONSTRAINT `SALES_ORDER_DETAIL_order_id_fkey` FOREIGN KEY (`order_id`) REFERENCES `SALES_ORDER`(`order_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SALES_ORDER_DETAIL` ADD CONSTRAINT `SALES_ORDER_DETAIL_product_id_fkey` FOREIGN KEY (`product_id`) REFERENCES `PRODUCT`(`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Staff {
+  staff_id   Int    @id @default(autoincrement())
+  staff_name String
+  username   String @unique
+  password   String
+  role       String
+
+  inventoryTransactions InventoryTransaction[]
+  salesOrders           SalesOrder[]
+
+  @@map("STAFF")
+}
+
+model Product {
+  product_id   Int @id @default(autoincrement())
+  product_name String
+  category     String
+  cost_price   Float
+  retail_price Float
+
+  warehouseStocks    WarehouseStock[]
+  vehicleStocks      VehicleStock[]
+  transactionDetails TransactionDetail[]
+  salesOrderDetails  SalesOrderDetail[]
+
+  @@map("PRODUCT")
+}
+
+model Warehouse {
+  warehouse_id   Int @id @default(autoincrement())
+  warehouse_name String
+
+  stocks           WarehouseStock[]
+  fromTransactions InventoryTransaction[] @relation("fromWarehouse")
+  toTransactions   InventoryTransaction[] @relation("toWarehouse")
+  salesOrders      SalesOrder[]
+
+  @@map("WAREHOUSE")
+}
+
+model Vehicle {
+  vehicle_id   Int @id @default(autoincrement())
+  vehicle_name String
+
+  stocks           VehicleStock[]
+  fromTransactions InventoryTransaction[] @relation("fromVehicle")
+  toTransactions   InventoryTransaction[] @relation("toVehicle")
+  salesOrders      SalesOrder[]
+
+  @@map("VEHICLE")
+}
+
+model WarehouseStock {
+  warehouse_id Int
+  product_id   Int
+  quantity     Int
+
+  warehouse Warehouse @relation(fields: [warehouse_id], references: [warehouse_id])
+  product   Product   @relation(fields: [product_id], references: [product_id])
+
+  @@id([warehouse_id, product_id])
+  @@map("WAREHOUSE_STOCK")
+}
+
+model VehicleStock {
+  vehicle_id Int
+  product_id Int
+  quantity   Int
+
+  vehicle Vehicle @relation(fields: [vehicle_id], references: [vehicle_id])
+  product Product @relation(fields: [product_id], references: [product_id])
+
+  @@id([vehicle_id, product_id])
+  @@map("VEHICLE_STOCK")
+}
+
+model InventoryTransaction {
+  transaction_id   Int      @id @default(autoincrement())
+  transaction_type String
+  date_time        DateTime @default(now())
+  staff_id         Int
+  from_warehouse_id Int?
+  to_warehouse_id   Int?
+  from_vehicle_id   Int?
+  to_vehicle_id     Int?
+
+  staff         Staff      @relation(fields: [staff_id], references: [staff_id])
+  fromWarehouse Warehouse? @relation("fromWarehouse", fields: [from_warehouse_id], references: [warehouse_id])
+  toWarehouse   Warehouse? @relation("toWarehouse", fields: [to_warehouse_id], references: [warehouse_id])
+  fromVehicle   Vehicle?   @relation("fromVehicle", fields: [from_vehicle_id], references: [vehicle_id])
+  toVehicle     Vehicle?   @relation("toVehicle", fields: [to_vehicle_id], references: [vehicle_id])
+  details       TransactionDetail[]
+
+  @@map("INVENTORY_TRANSACTION")
+}
+
+model TransactionDetail {
+  transaction_id Int
+  product_id     Int
+  quantity       Int
+
+  transaction InventoryTransaction @relation(fields: [transaction_id], references: [transaction_id])
+  product     Product              @relation(fields: [product_id], references: [product_id])
+
+  @@id([transaction_id, product_id])
+  @@map("TRANSACTION_DETAIL")
+}
+
+model SalesOrder {
+  order_id            Int      @id @default(autoincrement())
+  order_date          DateTime @default(now())
+  salesperson_id      Int
+  source_vehicle_id   Int?
+  source_warehouse_id Int?
+  total_amount        Float
+
+  salesperson     Staff      @relation(fields: [salesperson_id], references: [staff_id])
+  sourceVehicle   Vehicle?   @relation(fields: [source_vehicle_id], references: [vehicle_id])
+  sourceWarehouse Warehouse? @relation(fields: [source_warehouse_id], references: [warehouse_id])
+  details         SalesOrderDetail[]
+
+  @@map("SALES_ORDER")
+}
+
+model SalesOrderDetail {
+  order_id      Int
+  product_id    Int
+  quantity_sold Int
+  sold_at_price Float
+
+  order   SalesOrder @relation(fields: [order_id], references: [order_id])
+  product Product    @relation(fields: [product_id], references: [product_id])
+
+  @@id([order_id, product_id])
+  @@map("SALES_ORDER_DETAIL")
+}
