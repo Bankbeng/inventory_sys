@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/config";
 
 type Product = {
   product_id: number;
@@ -34,7 +35,7 @@ export default function ProductsPage() {
 
   async function loadProducts() {
     try {
-      const response = await fetch("http://localhost:3000/api/products");
+      const response = await fetch(`${API_BASE_URL}/api/products`);
       const data = await response.json();
       setProducts(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -88,7 +89,7 @@ export default function ProductsPage() {
       };
 
       const response = await fetch(
-        editingId ? `http://localhost:3000/api/products/${editingId}` : "http://localhost:3000/api/products",
+        editingId ? `${API_BASE_URL}/api/products/${editingId}` : `${API_BASE_URL}/api/products`,
         {
           method: editingId ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -119,7 +120,7 @@ export default function ProductsPage() {
     if (!window.confirm(`Delete ${product.product_name}?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/products/${productId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
         method: "DELETE",
       });
 

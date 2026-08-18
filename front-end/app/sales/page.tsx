@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/config";
 
 type SalesOrder = {
   order_id: number;
@@ -16,7 +17,7 @@ export default function SalesPage() {
   useEffect(() => {
     async function loadSales() {
       try {
-        const response = await fetch("http://localhost:3000/api/sales-orders");
+        const response = await fetch(`${API_BASE_URL}/api/sales-orders`);
         const data = await response.json();
         setSales(Array.isArray(data) ? data : []);
       } catch (error) {

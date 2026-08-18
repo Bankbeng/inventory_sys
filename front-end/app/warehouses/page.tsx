@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/config";
 
 type Warehouse = {
   warehouse_id: number;
@@ -25,7 +26,7 @@ export default function WarehousesPage() {
 
   async function loadWarehouses() {
     try {
-      const response = await fetch("http://localhost:3000/api/warehouses");
+      const response = await fetch(`${API_BASE_URL}/api/warehouses`);
       const data = await response.json();
       setWarehouses(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -58,7 +59,7 @@ export default function WarehousesPage() {
 
     try {
       const response = await fetch(
-        editingId ? `http://localhost:3000/api/warehouses/${editingId}` : "http://localhost:3000/api/warehouses",
+        editingId ? `${API_BASE_URL}/api/warehouses/${editingId}` : `${API_BASE_URL}/api/warehouses`,
         {
           method: editingId ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -89,7 +90,7 @@ export default function WarehousesPage() {
     if (!window.confirm(`Delete ${warehouse.warehouse_name}?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/warehouses/${warehouseId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/warehouses/${warehouseId}`, {
         method: "DELETE",
       });
 

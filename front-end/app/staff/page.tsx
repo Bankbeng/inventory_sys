@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/config";
 
 type StaffMember = {
   staff_id: number;
@@ -34,7 +35,7 @@ export default function StaffPage() {
 
   async function loadStaff() {
     try {
-      const response = await fetch("http://localhost:3000/api/staff");
+      const response = await fetch(`${API_BASE_URL}/api/staff`);
       const data = await response.json();
       setStaffMembers(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -84,7 +85,7 @@ export default function StaffPage() {
       };
 
       const response = await fetch(
-        editingId ? `http://localhost:3000/api/staff/${editingId}` : "http://localhost:3000/api/staff",
+        editingId ? `${API_BASE_URL}/api/staff/${editingId}` : `${API_BASE_URL}/api/staff`,
         {
           method: editingId ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -118,7 +119,7 @@ export default function StaffPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/api/staff/${staffId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/staff/${staffId}`, {
         method: "DELETE",
       });
 

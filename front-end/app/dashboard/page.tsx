@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/config";
 
 type Product = {
   product_id: number;
@@ -51,10 +52,10 @@ export default function DashboardPage() {
     async function loadDashboardData() {
       try {
         const [productResponse, staffResponse, stockResponse, ordersResponse] = await Promise.all([
-          fetch("http://localhost:3000/api/products"),
-          fetch("http://localhost:3000/api/staff"),
-          fetch("http://localhost:3000/api/warehouse-stocks"),
-          fetch("http://localhost:3000/api/sales-orders"),
+          fetch(`${API_BASE_URL}/api/products`),
+          fetch(`${API_BASE_URL}/api/staff`),
+          fetch(`${API_BASE_URL}/api/warehouse-stocks`),
+          fetch(`${API_BASE_URL}/api/sales-orders`),
         ]);
 
         const [productsData, staffData, stockData, ordersData] = await Promise.all([

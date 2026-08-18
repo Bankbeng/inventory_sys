@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/config";
 
 type Vehicle = {
   vehicle_id: number;
@@ -25,7 +26,7 @@ export default function VehiclesPage() {
 
   async function loadVehicles() {
     try {
-      const response = await fetch("http://localhost:3000/api/vehicles");
+      const response = await fetch(`${API_BASE_URL}/api/vehicles`);
       const data = await response.json();
       setVehicles(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -58,7 +59,7 @@ export default function VehiclesPage() {
 
     try {
       const response = await fetch(
-        editingId ? `http://localhost:3000/api/vehicles/${editingId}` : "http://localhost:3000/api/vehicles",
+        editingId ? `${API_BASE_URL}/api/vehicles/${editingId}` : `${API_BASE_URL}/api/vehicles`,
         {
           method: editingId ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -89,7 +90,7 @@ export default function VehiclesPage() {
     if (!window.confirm(`Delete ${vehicle.vehicle_name}?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/vehicles/${vehicleId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/vehicles/${vehicleId}`, {
         method: "DELETE",
       });
 

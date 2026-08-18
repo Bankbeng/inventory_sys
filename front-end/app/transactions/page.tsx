@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/config";
 
 type TransactionDetail = {
   transaction_id: number;
@@ -39,8 +40,8 @@ export default function TransactionsPage() {
   async function loadData() {
     try {
       const [transactionResponse, productResponse] = await Promise.all([
-        fetch("http://localhost:3000/api/inventory-transactions"),
-        fetch("http://localhost:3000/api/products"),
+        fetch(`${API_BASE_URL}/api/inventory-transactions`),
+        fetch(`${API_BASE_URL}/api/products`),
       ]);
 
       const [transactionData, productData] = await Promise.all([

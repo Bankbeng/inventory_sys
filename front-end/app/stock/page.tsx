@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/config";
 
 type Product = {
   product_id: number;
@@ -78,12 +79,12 @@ export default function StockPage() {
   async function loadStockData() {
     try {
       const [warehouseResponse, vehicleResponse, productResponse, warehouseListResponse, vehicleListResponse, staffResponse] = await Promise.all([
-        fetch("http://localhost:3000/api/warehouse-stocks"),
-        fetch("http://localhost:3000/api/vehicle-stocks"),
-        fetch("http://localhost:3000/api/products"),
-        fetch("http://localhost:3000/api/warehouses"),
-        fetch("http://localhost:3000/api/vehicles"),
-        fetch("http://localhost:3000/api/staff"),
+        fetch(`${API_BASE_URL}/api/warehouse-stocks`),
+        fetch(`${API_BASE_URL}/api/vehicle-stocks`),
+        fetch(`${API_BASE_URL}/api/products`),
+        fetch(`${API_BASE_URL}/api/warehouses`),
+        fetch(`${API_BASE_URL}/api/vehicles`),
+        fetch(`${API_BASE_URL}/api/staff`),
       ]);
 
       const [warehouseData, vehicleData, productData, warehouseListData, vehicleListData, staffData] = await Promise.all([
@@ -230,7 +231,7 @@ export default function StockPage() {
         }
       }
 
-      const response = await fetch("http://localhost:3000/api/inventory-transactions", {
+      const response = await fetch(`${API_BASE_URL}/api/inventory-transactions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
