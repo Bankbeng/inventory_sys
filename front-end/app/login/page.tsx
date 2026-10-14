@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
+import BrandMark from "../components/BrandMark";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("admin");
@@ -40,7 +41,9 @@ export default function LoginPage() {
       <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60 lg:grid-cols-2">
         <div className="hidden bg-gradient-to-br from-cyan-50 via-white to-sky-100 p-8 lg:flex lg:flex-col lg:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-cyan-700">Inventory Flow</p>
+            <p>
+              <BrandMark />
+            </p>
             <h1 className="mt-6 text-3xl font-bold text-slate-900">Smart inventory operations</h1>
           </div>
           <div className="space-y-3 text-sm text-slate-700">

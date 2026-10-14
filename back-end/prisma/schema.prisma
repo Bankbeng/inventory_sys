@@ -119,18 +119,34 @@ model TransactionDetail {
 
 model SalesOrder {
   order_id            Int      @id @default(autoincrement())
+  customer_name       String   @default("Walk-in Customer")
   order_date          DateTime @default(now())
   salesperson_id      Int
   source_vehicle_id   Int?
   source_warehouse_id Int?
   total_amount        Float
+  is_paid             Boolean  @default(true)
 
   salesperson     Staff      @relation(fields: [salesperson_id], references: [staff_id])
   sourceVehicle   Vehicle?   @relation(fields: [source_vehicle_id], references: [vehicle_id])
   sourceWarehouse Warehouse? @relation(fields: [source_warehouse_id], references: [warehouse_id])
   details         SalesOrderDetail[]
+  payments        SalesOrderPayment[]
 
   @@map("SALES_ORDER")
+}
+
+model SalesOrderPayment {
+  payment_id Int      @id @default(autoincrement())
+  order_id   Int
+  amount     Float
+  paid_at    DateTime @default(now())
+  note       String?
+
+  order SalesOrder @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
+
+  @@index([order_id, paid_at])
+  @@map("SALES_ORDER_PAYMENT")
 }
 
 model SalesOrderDetail {

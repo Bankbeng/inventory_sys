@@ -1,76 +1,70 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
+import { formatCurrency } from "@/lib/currency";
 
-type Product = {
-  product_id: number;
-  product_name: string;
-  category: string;
-  cost_price: number;
-  retail_price: number;
-};
-
-type Staff = {
-  staff_id: number;
-  staff_name: string;
-  username: string;
-  role: string;
-};
-
-type WarehouseStock = {
-  warehouse_id: number;
-  product_id: number;
+type Stock = {
   quantity: number;
-  warehouse?: { warehouse_name: string };
-  product?: { product_name: string };
+  product?: { cost_price: number; retail_price: number };
 };
 
 type SalesOrder = {
-  order_id: number;
   total_amount: number;
-  salesperson?: { staff_name: string };
+  order_date: string;
+  details?: {
+    quantity_sold: number;
+    sold_at_price: number;
+    product?: { category: string };
+  }[];
 };
 
-const quickLinks = [
-  { label: "Staff", href: "/staff" },
-  { label: "Products", href: "/products" },
-  { label: "Warehouses", href: "/warehouses" },
-  { label: "Vehicles", href: "/vehicles" },
-  { label: "Sales", href: "/sales" },
-];
+type SalesPeriod = "all" | "range";
+
+function localDateKey(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export default function DashboardPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [staff, setStaff] = useState<Staff[]>([]);
-  const [stocks, setStocks] = useState<WarehouseStock[]>([]);
+  const [warehouseStocks, setWarehouseStocks] = useState<Stock[]>([]);
+  const [vehicleStocks, setVehicleStocks] = useState<Stock[]>([]);
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [salesPeriod, setSalesPeriod] = useState<SalesPeriod>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [productResponse, staffResponse, stockResponse, ordersResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/products`),
-          fetch(`${API_BASE_URL}/api/staff`),
+        const [warehouseResponse, vehicleResponse, ordersResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/api/warehouse-stocks`),
+          fetch(`${API_BASE_URL}/api/vehicle-stocks`),
           fetch(`${API_BASE_URL}/api/sales-orders`),
         ]);
 
-        const [productsData, staffData, stockData, ordersData] = await Promise.all([
-          productResponse.json(),
-          staffResponse.json(),
-          stockResponse.json(),
+        if (!warehouseResponse.ok || !vehicleResponse.ok || !ordersResponse.ok) {
+          throw new Error("Dashboard API request failed.");
+        }
+
+        const [warehouseData, vehicleData, ordersData] = await Promise.all([
+          warehouseResponse.json(),
+          vehicleResponse.json(),
           ordersResponse.json(),
         ]);
-
-        setProducts(Array.isArray(productsData) ? productsData : []);
-        setStaff(Array.isArray(staffData) ? staffData : []);
-        setStocks(Array.isArray(stockData) ? stockData : []);
+        setWarehouseStocks(Array.isArray(warehouseData) ? warehouseData : []);
+        setVehicleStocks(Array.isArray(vehicleData) ? vehicleData : []);
         setOrders(Array.isArray(ordersData) ? ordersData : []);
-      } catch (error) {
-        console.error("Failed to load dashboard data", error);
+      } catch (loadError) {
+        console.error("Failed to load dashboard data", loadError);
+        setError("Dashboard data could not be loaded. Check the API connection and try again.");
       } finally {
         setLoading(false);
       }
@@ -79,111 +73,191 @@ export default function DashboardPage() {
     loadDashboardData();
   }, []);
 
-  const totalInventory = stocks.reduce((sum, item) => sum + (item.quantity ?? 0), 0);
-  const totalSales = orders.reduce((sum, item) => sum + (item.total_amount ?? 0), 0);
-  const lowStockCount = stocks.filter((item) => (item.quantity ?? 0) <= 10).length;
+  const validDateRange = Boolean(startDate && endDate && startDate <= endDate);
+  const periodOrders = orders.filter((order) => {
+    if (salesPeriod === "all") return true;
+    if (!validDateRange) return false;
 
-  const recentOrders = orders.slice(-3).map((order) => ({
-    id: `SO-${order.order_id}`,
-    customer: order.salesperson?.staff_name ?? "Unknown",
-    total: `$${(order.total_amount ?? 0).toLocaleString()}`,
-    status: "Processed",
-  }));
+    const orderDate = localDateKey(order.order_date);
+    return orderDate >= startDate && orderDate <= endDate;
+  });
+  const totalSales = periodOrders.reduce((sum, order) => sum + (order.total_amount ?? 0), 0);
+  const categoryTotals = new Map<string, number>();
+  for (const order of periodOrders) {
+    for (const detail of order.details ?? []) {
+      const category = detail.product?.category || "Uncategorized";
+      const lineTotal = (detail.quantity_sold ?? 0) * (detail.sold_at_price ?? 0);
+      categoryTotals.set(category, (categoryTotals.get(category) ?? 0) + lineTotal);
+    }
+  }
+  const categorySales = [...categoryTotals.entries()]
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((first, second) => second.amount - first.amount || first.category.localeCompare(second.category));
+  const categorySalesTotal = categorySales.reduce((sum, item) => sum + item.amount, 0);
+  const salesTotalMessage = salesPeriod === "all"
+    ? "Combined value of all recorded sales orders"
+    : !startDate || !endDate
+      ? "Select both a start date and an end date."
+      : startDate > endDate
+        ? "Start date must be on or before end date."
+        : "Sales within the selected date range";
+  const inventoryValue = (stocks: Stock[], price: "cost_price" | "retail_price") =>
+    stocks.reduce((total, stock) => total + (stock.quantity ?? 0) * (stock.product?.[price] ?? 0), 0);
+
+  const warehouseCost = inventoryValue(warehouseStocks, "cost_price");
+  const vehicleCost = inventoryValue(vehicleStocks, "cost_price");
+  const warehouseRetail = inventoryValue(warehouseStocks, "retail_price");
+  const vehicleRetail = inventoryValue(vehicleStocks, "retail_price");
 
   return (
-    <main className="min-h-screen bg-white px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#f4f6f3] px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-slate-600">
-            Loading dashboard data...
+        <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.16em] text-teal-700 uppercase">Business overview</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Sales &amp; inventory</h1>
           </div>
+          <p className="text-sm text-slate-500">Stock values reflect current inventory</p>
+        </header>
+
+        {loading ? (
+          <div className="border-y border-slate-300 py-8 text-sm text-slate-600" role="status">Loading dashboard data...</div>
+        ) : error ? (
+          <div className="border-y border-rose-300 py-6 text-sm text-rose-800" role="alert">{error}</div>
         ) : (
           <>
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
-                <p className="text-sm text-slate-500">Total inventory</p>
-                <p className="mt-4 text-3xl font-bold text-cyan-600">{totalInventory.toLocaleString()}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
-                <p className="text-sm text-slate-500">Sales total</p>
-                <p className="mt-4 text-3xl font-bold text-emerald-600">${totalSales.toLocaleString()}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
-                <p className="text-sm text-slate-500">Open orders</p>
-                <p className="mt-4 text-3xl font-bold text-violet-600">{orders.length}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
-                <p className="text-sm text-slate-500">Low stock</p>
-                <p className="mt-4 text-3xl font-bold text-amber-600">{lowStockCount}</p>
+            <section aria-labelledby="sales-total-heading" className="border-y border-slate-300 py-6">
+              <div className="flex flex-wrap items-end justify-between gap-5">
+                <div>
+                  <h2 id="sales-total-heading" className="text-sm font-medium text-slate-600">Sales total</h2>
+                  <p className="mt-2 text-4xl font-semibold tracking-tight text-teal-800 sm:text-5xl">
+                    {salesPeriod === "range" && !validDateRange ? "--" : formatCurrency(totalSales)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-end gap-4">
+                  <p className="pb-1 text-sm text-slate-500">{salesTotalMessage}</p>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <fieldset>
+                      <legend className="mb-1.5 text-xs font-medium text-slate-500">Period</legend>
+                      <div className="inline-flex rounded-md border border-slate-300 p-0.5" aria-label="Sales total period">
+                        {(["all", "range"] as const).map((period) => (
+                          <button
+                            key={period}
+                            type="button"
+                            aria-pressed={salesPeriod === period}
+                            onClick={() => setSalesPeriod(period)}
+                            className={[
+                              "rounded px-3 py-1.5 text-xs font-medium transition-colors",
+                              salesPeriod === period
+                                ? "bg-teal-800 text-white"
+                                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                            ].join(" ")}
+                          >
+                            {period === "all" ? "All time" : "Date range"}
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                    {salesPeriod === "range" && (
+                      <label className="grid gap-1 text-xs font-medium text-slate-500">
+                        Start date
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={(event) => setStartDate(event.target.value)}
+                          className="h-9 rounded-md border border-slate-300 bg-white px-2.5 text-sm text-slate-800 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/20"
+                        />
+                      </label>
+                    )}
+                    {salesPeriod === "range" && (
+                      <label className="grid gap-1 text-xs font-medium text-slate-500">
+                        End date
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={(event) => setEndDate(event.target.value)}
+                          className="h-9 rounded-md border border-slate-300 bg-white px-2.5 text-sm text-slate-800 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/20"
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
               </div>
             </section>
 
-            <section className="mt-8 grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                <div className="mb-5 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-slate-900">Recent sales orders</h2>
-                  <Link href="/sales" className="text-sm text-cyan-600 transition hover:text-cyan-700">
-                    View all
-                  </Link>
-                </div>
-
-                <div className="overflow-hidden rounded-xl border border-slate-200">
-                  <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                    <thead className="bg-slate-100 text-slate-600">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">Order</th>
-                        <th className="px-4 py-3 font-medium">Customer</th>
-                        <th className="px-4 py-3 font-medium">Total</th>
-                        <th className="px-4 py-3 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 bg-white">
-                      {recentOrders.length > 0 ? (
-                        recentOrders.map((order) => (
-                          <tr key={order.id}>
-                            <td className="px-4 py-3 font-medium text-slate-900">{order.id}</td>
-                            <td className="px-4 py-3 text-slate-600">{order.customer}</td>
-                            <td className="px-4 py-3 text-slate-600">{order.total}</td>
-                            <td className="px-4 py-3">
-                              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                                {order.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
-                            No sales orders found.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+            <section aria-labelledby="category-sales-heading" className="border-b border-slate-300 py-6">
+              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+                <h2 id="category-sales-heading" className="text-lg font-semibold text-slate-950">Sales by product category</h2>
+                <p className="text-xs text-slate-500">Based on sold quantities and unit prices</p>
               </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                <h2 className="text-xl font-semibold text-slate-900">Operational summary</h2>
-                <div className="mt-5 space-y-4">
-                  <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
-                    <p className="text-sm font-medium text-cyan-700">Products</p>
-                    <p className="mt-1 text-sm text-slate-700">{products.length} tracked products</p>
-                  </div>
-                  <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
-                    <p className="text-sm font-medium text-violet-700">Staff</p>
-                    <p className="mt-1 text-sm text-slate-700">{staff.length} active team members</p>
-                  </div>
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-sm font-medium text-amber-700">Stock alerts</p>
-                    <p className="mt-1 text-sm text-slate-700">{lowStockCount} entries below the threshold</p>
-                  </div>
+              {salesPeriod === "range" && !validDateRange ? (
+                <p className="py-4 text-sm text-slate-500">Select a valid date range to see category sales.</p>
+              ) : categorySales.length > 0 ? (
+                <div className="divide-y divide-slate-200 border-y border-slate-200">
+                  {categorySales.map(({ category, amount }) => {
+                    const share = categorySalesTotal > 0 ? (amount / categorySalesTotal) * 100 : 0;
+                    return (
+                      <div key={category} className="grid gap-2 py-3 sm:grid-cols-[minmax(10rem,1fr)_2fr_auto] sm:items-center sm:gap-5">
+                        <span className="text-sm font-medium text-slate-800">{category}</span>
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
+                          <div className="h-full rounded-full bg-teal-700" style={{ width: `${share}%` }} />
+                        </div>
+                        <span className="text-right text-sm font-semibold tabular-nums text-slate-950">
+                          {formatCurrency(amount)}
+                          <span className="ml-2 text-xs font-normal text-slate-500">{share.toFixed(1)}%</span>
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
+              ) : (
+                <p className="py-4 text-sm text-slate-500">No category sales recorded for this period.</p>
+              )}
+            </section>
+
+            <section aria-labelledby="inventory-value-heading" className="border-t border-slate-300 pt-7 pb-10">
+              <div className="mb-5">
+                <p className="text-xs font-semibold tracking-[0.16em] text-teal-700 uppercase">Current stock</p>
+                <h2 id="inventory-value-heading" className="mt-1 text-xl font-semibold text-slate-950">Inventory value by price</h2>
+              </div>
+              <div className="grid gap-8 md:grid-cols-2">
+                <ValueSummary title="Cost price" warehouseValue={warehouseCost} vehicleValue={vehicleCost} />
+                <ValueSummary title="Retail price" warehouseValue={warehouseRetail} vehicleValue={vehicleRetail} />
               </div>
             </section>
           </>
         )}
       </div>
     </main>
+  );
+}
+
+function ValueSummary({
+  title,
+  warehouseValue,
+  vehicleValue,
+}: {
+  title: string;
+  warehouseValue: number;
+  vehicleValue: number;
+}) {
+  return (
+    <article className="border-t-2 border-teal-700 pt-4">
+      <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+      <dl className="mt-4 space-y-3">
+        <div className="flex justify-between gap-4 text-sm">
+          <dt className="text-slate-600">Warehouse</dt>
+          <dd className="font-medium tabular-nums text-slate-900">{formatCurrency(warehouseValue)}</dd>
+        </div>
+        <div className="flex justify-between gap-4 text-sm">
+          <dt className="text-slate-600">Vehicles</dt>
+          <dd className="font-medium tabular-nums text-slate-900">{formatCurrency(vehicleValue)}</dd>
+        </div>
+        <div className="flex justify-between gap-4 border-t border-slate-300 pt-3 text-sm">
+          <dt className="font-semibold text-slate-800">Warehouse + vehicles</dt>
+          <dd className="font-semibold tabular-nums text-teal-800">{formatCurrency(warehouseValue + vehicleValue)}</dd>
+        </div>
+      </dl>
+    </article>
   );
 }

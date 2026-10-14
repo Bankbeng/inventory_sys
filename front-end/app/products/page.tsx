@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
+import { formatCurrency } from "@/lib/currency";
 
 type Product = {
   product_id: number;
@@ -244,8 +245,8 @@ export default function ProductsPage() {
                 </div>
                 <h2 className="mt-4 text-xl font-semibold text-slate-900">{product.product_name}</h2>
                 <div className="mt-5 space-y-2 text-sm text-slate-600">
-                  <p>Cost: <span className="font-medium text-slate-900">${Number(product.cost_price).toFixed(2)}</span></p>
-                  <p>Retail: <span className="font-medium text-cyan-700">${Number(product.retail_price).toFixed(2)}</span></p>
+                  <p>Cost: <span className="font-medium text-slate-900">{formatCurrency(Number(product.cost_price))}</span></p>
+                  <p>Retail: <span className="font-medium text-cyan-700">{formatCurrency(Number(product.retail_price))}</span></p>
                 </div>
                 <div className="mt-5 flex gap-2">
                   <button

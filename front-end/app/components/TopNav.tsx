@@ -2,15 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import BrandMark from "./BrandMark";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/stock", label: "Stock" },
+  { href: "/stock-remaining", label: "Remaining stock" },
   { href: "/products", label: "Products" },
   { href: "/staff", label: "Staff" },
   { href: "/warehouses", label: "Warehouses" },
   { href: "/vehicles", label: "Vehicles" },
   { href: "/sales", label: "Sales" },
+  { href: "/accounts-receivable", label: "Receivables" },
+  { href: "/sales-kpi", label: "Sales KPI" },
   { href: "/transactions", label: "Transactions" },
 ];
 
@@ -22,9 +26,9 @@ export default function TopNav() {
       <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <Link
           href="/dashboard"
-          className="text-base font-semibold tracking-[0.2em] text-cyan-600 uppercase"
+          className="inline-flex items-center"
         >
-          Inventory
+          <BrandMark />
         </Link>
 
         <div className="flex flex-wrap items-center gap-2">

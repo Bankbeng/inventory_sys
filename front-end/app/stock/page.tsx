@@ -23,22 +23,6 @@ type Staff = {
   staff_name: string;
 };
 
-type WarehouseStock = {
-  warehouse_id: number;
-  product_id: number;
-  quantity: number;
-  warehouse?: { warehouse_name: string };
-  product?: { product_name: string };
-};
-
-type VehicleStock = {
-  vehicle_id: number;
-  product_id: number;
-  quantity: number;
-  vehicle?: { vehicle_name: string };
-  product?: { product_name: string };
-};
-
 type MovementItem = {
   productId: string;
   quantity: string;
@@ -65,8 +49,6 @@ const initialForm: MovementForm = {
 };
 
 export default function StockPage() {
-  const [warehouseStocks, setWarehouseStocks] = useState<WarehouseStock[]>([]);
-  const [vehicleStocks, setVehicleStocks] = useState<VehicleStock[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -78,26 +60,20 @@ export default function StockPage() {
 
   async function loadStockData() {
     try {
-      const [warehouseResponse, vehicleResponse, productResponse, warehouseListResponse, vehicleListResponse, staffResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/warehouse-stocks`),
-        fetch(`${API_BASE_URL}/api/vehicle-stocks`),
+      const [productResponse, warehouseListResponse, vehicleListResponse, staffResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/api/products`),
         fetch(`${API_BASE_URL}/api/warehouses`),
         fetch(`${API_BASE_URL}/api/vehicles`),
         fetch(`${API_BASE_URL}/api/staff`),
       ]);
 
-      const [warehouseData, vehicleData, productData, warehouseListData, vehicleListData, staffData] = await Promise.all([
-        warehouseResponse.json(),
-        vehicleResponse.json(),
+      const [productData, warehouseListData, vehicleListData, staffData] = await Promise.all([
         productResponse.json(),
         warehouseListResponse.json(),
         vehicleListResponse.json(),
         staffResponse.json(),
       ]);
 
-      setWarehouseStocks(Array.isArray(warehouseData) ? warehouseData : []);
-      setVehicleStocks(Array.isArray(vehicleData) ? vehicleData : []);
       setProducts(Array.isArray(productData) ? productData : []);
       setWarehouses(Array.isArray(warehouseListData) ? warehouseListData : []);
       setVehicles(Array.isArray(vehicleListData) ? vehicleListData : []);
@@ -126,9 +102,6 @@ export default function StockPage() {
   useEffect(() => {
     loadStockData();
   }, []);
-
-  const warehouseLowStock = warehouseStocks.filter((item) => (item.quantity ?? 0) <= 10);
-  const vehicleLowStock = vehicleStocks.filter((item) => (item.quantity ?? 0) <= 10);
 
   const sourceOptions: Array<Warehouse | Vehicle> = form.sourceLocationType === "warehouse" ? warehouses : vehicles;
   const destinationOptions: Array<Warehouse | Vehicle> = form.destinationLocationType === "warehouse" ? warehouses : vehicles;
@@ -268,25 +241,6 @@ export default function StockPage() {
           <p className="text-sm uppercase tracking-[0.25em] text-cyan-600">Inventory</p>
           <h1 className="mt-2 text-3xl font-bold text-slate-900">Stock overview</h1>
         </div>
-
-        <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Warehouse stock rows</p>
-            <p className="mt-4 text-3xl font-bold text-cyan-600">{warehouseStocks.length}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Vehicle stock rows</p>
-            <p className="mt-4 text-3xl font-bold text-violet-600">{vehicleStocks.length}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Low warehouse stock</p>
-            <p className="mt-4 text-3xl font-bold text-amber-600">{warehouseLowStock.length}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Low vehicle stock</p>
-            <p className="mt-4 text-3xl font-bold text-rose-600">{vehicleLowStock.length}</p>
-          </div>
-        </section>
 
         <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-center justify-between gap-3">
@@ -480,93 +434,12 @@ export default function StockPage() {
           </form>
         </section>
 
-        {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">
+        {loading && (
+          <div className="border-y border-slate-200 py-6 text-sm text-slate-600" role="status">
             Loading stock data...
           </div>
-        ) : (
-          <div className="grid gap-8 xl:grid-cols-2">
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-slate-900">Warehouse stock</h2>
-                <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-medium text-cyan-700">
-                  {warehouseStocks.length} records
-                </span>
-              </div>
-
-              <div className="overflow-hidden rounded-xl border border-slate-200">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-slate-100 text-slate-600">
-                    <tr>
-                      <th className="px-3 py-3 font-medium">Warehouse</th>
-                      <th className="px-3 py-3 font-medium">Product</th>
-                      <th className="px-3 py-3 font-medium">Quantity</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 bg-white">
-                    {warehouseStocks.length > 0 ? (
-                      warehouseStocks.map((item) => (
-                        <tr key={`${item.warehouse_id}-${item.product_id}`} className={item.quantity <= 10 ? "bg-amber-500/5" : ""}>
-                          <td className="px-3 py-3 text-slate-700">{item.warehouse?.warehouse_name ?? `Warehouse ${item.warehouse_id}`}</td>
-                          <td className="px-3 py-3 text-slate-700">{item.product?.product_name ?? `Product ${item.product_id}`}</td>
-                          <td className={`px-3 py-3 font-medium ${item.quantity <= 10 ? "text-amber-700" : "text-emerald-700"}`}>
-                            {item.quantity}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={3} className="px-3 py-6 text-center text-slate-500">
-                          No warehouse stock available.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-slate-900">Vehicle stock</h2>
-                <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
-                  {vehicleStocks.length} records
-                </span>
-              </div>
-
-              <div className="overflow-hidden rounded-xl border border-slate-200">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-slate-100 text-slate-600">
-                    <tr>
-                      <th className="px-3 py-3 font-medium">Vehicle</th>
-                      <th className="px-3 py-3 font-medium">Product</th>
-                      <th className="px-3 py-3 font-medium">Quantity</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 bg-white">
-                    {vehicleStocks.length > 0 ? (
-                      vehicleStocks.map((item) => (
-                        <tr key={`${item.vehicle_id}-${item.product_id}`} className={item.quantity <= 10 ? "bg-rose-500/5" : ""}>
-                          <td className="px-3 py-3 text-slate-700">{item.vehicle?.vehicle_name ?? `Vehicle ${item.vehicle_id}`}</td>
-                          <td className="px-3 py-3 text-slate-700">{item.product?.product_name ?? `Product ${item.product_id}`}</td>
-                          <td className={`px-3 py-3 font-medium ${item.quantity <= 10 ? "text-rose-700" : "text-emerald-700"}`}>
-                            {item.quantity}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={3} className="px-3 py-6 text-center text-slate-500">
-                          No vehicle stock available.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
         )}
+
       </div>
     </main>
   );

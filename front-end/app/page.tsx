@@ -1,10 +1,13 @@
 import Link from "next/link";
+import BrandMark from "./components/BrandMark";
 
 export default function Home() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 text-slate-900">
       <div className="w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60 sm:p-12">
-        <p className="text-sm uppercase tracking-[0.3em] text-cyan-600">Inventory System</p>
+        <p>
+          <BrandMark />
+        </p>
         <h1 className="mt-6 text-4xl font-bold text-slate-900 sm:text-5xl">
           Manage stock, sales, and teams in one place.
         </h1>

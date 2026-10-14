@@ -15,7 +15,7 @@ export async function OPTIONS() {
 export async function GET() {
   try {
     const transactions = await prisma.inventoryTransaction.findMany({
-      orderBy: { transaction_id: "asc" },
+      orderBy: [{ date_time: "desc" }, { transaction_id: "desc" }],
       include: {
         staff: true,
         fromWarehouse: true,
