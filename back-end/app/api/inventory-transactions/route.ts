@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { getSessionFromRequest } from "@/lib/session";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "http://localhost:3001",
@@ -36,6 +37,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401, headers: corsHeaders },
+    );
+  }
+
   try {
     const body = await request.json();
     const rawItems = Array.isArray(body.items)
@@ -50,7 +59,6 @@ export async function POST(request: Request) {
       location_type,
       from_location_type,
       to_location_type,
-      staff_id,
       from_warehouse_id,
       to_warehouse_id,
       from_vehicle_id,
@@ -58,18 +66,11 @@ export async function POST(request: Request) {
     } = body;
 
     const normalizedMovement = String(movement_type ?? transaction_type ?? "in").trim().toLowerCase();
-    const staffId = Number(staff_id ?? 1);
+    const staffId = session.staffId;
 
     if (!["in", "out", "transfer"].includes(normalizedMovement)) {
       return NextResponse.json(
         { error: "movement_type must be one of: in, out, transfer" },
-        { status: 400, headers: corsHeaders },
-      );
-    }
-
-    if (!Number.isInteger(staffId) || staffId <= 0) {
-      return NextResponse.json(
-        { error: "Valid staff_id is required" },
         { status: 400, headers: corsHeaders },
       );
     }

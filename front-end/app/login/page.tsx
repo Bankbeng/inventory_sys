@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/config";
 import BrandMark from "../components/BrandMark";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("123456");
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/login`, {
@@ -27,10 +31,10 @@ export default function LoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      alert(`Welcome ${data.user.staff_name}`);
-      window.location.href = "/dashboard";
+      router.replace("/dashboard");
+      router.refresh();
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Login failed");
+      setError(error instanceof Error ? error.message : "Login failed");
     } finally {
       setLoading(false);
     }
@@ -69,6 +73,7 @@ export default function LoginPage() {
               <label className="mb-2 block text-sm font-medium text-slate-700">Username</label>
               <input
                 value={username}
+                autoComplete="username"
                 onChange={(event) => setUsername(event.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-cyan-400"
                 placeholder="Enter username"
@@ -81,6 +86,7 @@ export default function LoginPage() {
               <input
                 type="password"
                 value={password}
+                autoComplete="current-password"
                 onChange={(event) => setPassword(event.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-cyan-400"
                 placeholder="Enter password"
@@ -97,9 +103,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-sm text-slate-500">
-            Demo account: <span className="font-medium text-slate-700">admin / 123456</span>
-          </div>
+          {error && <p role="alert" className="mt-4 text-sm text-rose-700">{error}</p>}
         </div>
       </div>
     </main>

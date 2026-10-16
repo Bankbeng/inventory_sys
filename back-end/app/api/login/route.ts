@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { withoutPassword } from "@/lib/staff";
+import {
+  createSessionToken,
+  SESSION_COOKIE_NAME,
+  SESSION_DURATION_SECONDS,
+} from "@/lib/session";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "http://localhost:3001",
@@ -29,22 +36,49 @@ export async function POST(request: Request) {
       where: { username },
     });
 
-    if (!staff || staff.password !== password) {
+    if (!staff) {
       return NextResponse.json(
         { error: "Invalid username or password" },
         { status: 401, headers: corsHeaders },
       );
     }
 
-    const { password: _password, ...safeStaff } = staff;
+    const passwordCheck = await verifyPassword(password, staff.password);
+    if (!passwordCheck.valid) {
+      return NextResponse.json(
+        { error: "Invalid username or password" },
+        { status: 401, headers: corsHeaders },
+      );
+    }
 
-    return NextResponse.json(
+    if (passwordCheck.needsRehash) {
+      await prisma.staff.update({
+        where: { staff_id: staff.staff_id },
+        data: { password: await hashPassword(password) },
+      });
+    }
+
+    const safeStaff = withoutPassword(staff);
+    const response = NextResponse.json(
       {
         message: "Login successful",
         user: safeStaff,
       },
       { headers: corsHeaders },
     );
+    response.cookies.set(SESSION_COOKIE_NAME, createSessionToken({
+      staffId: staff.staff_id,
+      username: staff.username,
+      staffName: staff.staff_name,
+    }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_DURATION_SECONDS,
+    });
+
+    return response;
   } catch (error) {
     return NextResponse.json(
       {

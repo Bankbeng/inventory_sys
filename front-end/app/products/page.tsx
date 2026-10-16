@@ -8,6 +8,9 @@ type Product = {
   product_id: number;
   product_name: string;
   category: string;
+  type: string;
+  size: string;
+  unit: string;
   cost_price: number;
   retail_price: number;
 };
@@ -15,6 +18,9 @@ type Product = {
 type ProductFormState = {
   product_name: string;
   category: string;
+  type: string;
+  size: string;
+  unit: string;
   cost_price: string;
   retail_price: string;
 };
@@ -22,6 +28,9 @@ type ProductFormState = {
 const emptyForm: ProductFormState = {
   product_name: "",
   category: "",
+  type: "",
+  size: "",
+  unit: "",
   cost_price: "",
   retail_price: "",
 };
@@ -63,8 +72,12 @@ export default function ProductsPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!form.product_name.trim() || !form.category.trim()) {
-      setMessage("Product name and category are required.");
+    if (
+      !form.product_name.trim() ||
+      !form.category.trim() ||
+      !form.unit.trim()
+    ) {
+      setMessage("Product name, category, and unit are required.");
       return;
     }
 
@@ -85,6 +98,9 @@ export default function ProductsPage() {
       const payload = {
         product_name: form.product_name.trim(),
         category: form.category.trim(),
+        type: form.type.trim(),
+        size: form.size.trim(),
+        unit: form.unit.trim(),
         cost_price: Number(form.cost_price),
         retail_price: Number(form.retail_price),
       };
@@ -144,6 +160,9 @@ export default function ProductsPage() {
     setForm({
       product_name: product.product_name,
       category: product.category,
+      type: product.type,
+      size: product.size,
+      unit: product.unit,
       cost_price: String(product.cost_price),
       retail_price: String(product.retail_price),
     });
@@ -165,6 +184,7 @@ export default function ProductsPage() {
             <label className="text-sm text-slate-700">
               <span className="mb-2 block">Product name</span>
               <input
+                required
                 value={form.product_name}
                 onChange={(event) => handleChange("product_name", event.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
@@ -175,6 +195,7 @@ export default function ProductsPage() {
             <label className="text-sm text-slate-700">
               <span className="mb-2 block">Category</span>
               <input
+                required
                 value={form.category}
                 onChange={(event) => handleChange("category", event.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
@@ -183,8 +204,40 @@ export default function ProductsPage() {
             </label>
 
             <label className="text-sm text-slate-700">
+              <span className="mb-2 block">Type</span>
+              <input
+                value={form.type}
+                onChange={(event) => handleChange("type", event.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
+                placeholder="Jasmine"
+              />
+            </label>
+
+            <label className="text-sm text-slate-700">
+              <span className="mb-2 block">Size</span>
+              <input
+                value={form.size}
+                onChange={(event) => handleChange("size", event.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
+                placeholder="25"
+              />
+            </label>
+
+            <label className="text-sm text-slate-700">
+              <span className="mb-2 block">Unit</span>
+              <input
+                required
+                value={form.unit}
+                onChange={(event) => handleChange("unit", event.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
+                placeholder="kg"
+              />
+            </label>
+
+            <label className="text-sm text-slate-700">
               <span className="mb-2 block">Cost price</span>
               <input
+                required
                 type="number"
                 step="0.01"
                 value={form.cost_price}
@@ -197,6 +250,7 @@ export default function ProductsPage() {
             <label className="text-sm text-slate-700">
               <span className="mb-2 block">Retail price</span>
               <input
+                required
                 type="number"
                 step="0.01"
                 value={form.retail_price}
@@ -245,6 +299,8 @@ export default function ProductsPage() {
                 </div>
                 <h2 className="mt-4 text-xl font-semibold text-slate-900">{product.product_name}</h2>
                 <div className="mt-5 space-y-2 text-sm text-slate-600">
+                  <p>Type: <span className="font-medium text-slate-900">{product.type}</span></p>
+                  <p>Size: <span className="font-medium text-slate-900">{product.size} {product.unit}</span></p>
                   <p>Cost: <span className="font-medium text-slate-900">{formatCurrency(Number(product.cost_price))}</span></p>
                   <p>Retail: <span className="font-medium text-cyan-700">{formatCurrency(Number(product.retail_price))}</span></p>
                 </div>

@@ -1,0 +1,16 @@
+CREATE TABLE `CUSTOMER` (
+    `customer_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `customer_name` VARCHAR(191) NOT NULL,
+    `phone_number` VARCHAR(191) NULL,
+    `place_link` VARCHAR(2048) NULL,
+
+    PRIMARY KEY (`customer_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+ALTER TABLE `SALES_ORDER`
+ADD COLUMN `customer_id` INTEGER NULL;
+
+ALTER TABLE `SALES_ORDER`
+ADD CONSTRAINT `SALES_ORDER_customer_id_fkey`
+FOREIGN KEY (`customer_id`) REFERENCES `CUSTOMER`(`customer_id`)
+ON DELETE SET NULL ON UPDATE CASCADE;

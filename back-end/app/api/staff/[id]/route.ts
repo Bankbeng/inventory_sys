@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { withoutPassword } from "@/lib/staff";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "http://localhost:3001",
@@ -36,7 +38,7 @@ export async function GET(
       return NextResponse.json({ error: "Staff not found" }, { status: 404, headers: corsHeaders });
     }
 
-    return NextResponse.json(staff, { headers: corsHeaders });
+    return NextResponse.json(withoutPassword(staff), { headers: corsHeaders });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch staff record" },
@@ -57,12 +59,14 @@ export async function PATCH(
       data: {
         ...(body.staff_name !== undefined ? { staff_name: String(body.staff_name) } : {}),
         ...(body.username !== undefined ? { username: String(body.username).trim() } : {}),
-        ...(body.password !== undefined ? { password: String(body.password) } : {}),
+        ...(typeof body.password === "string" && body.password
+          ? { password: await hashPassword(body.password) }
+          : {}),
         ...(body.role !== undefined ? { role: String(body.role) } : {}),
       },
     });
 
-    return NextResponse.json(staff, { headers: corsHeaders });
+    return NextResponse.json(withoutPassword(staff), { headers: corsHeaders });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
       return NextResponse.json({ error: "Staff not found" }, { status: 404, headers: corsHeaders });

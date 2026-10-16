@@ -22,10 +22,33 @@ model Staff {
   @@map("STAFF")
 }
 
+model RolePagePermission {
+  role_name  String
+  page_path  String
+  can_access Boolean @default(false)
+
+  @@id([role_name, page_path])
+  @@map("ROLE_PAGE_PERMISSION")
+}
+
+model Customer {
+  customer_id   Int     @id @default(autoincrement())
+  customer_name String
+  phone_number  String?
+  place_link    String?
+
+  salesOrders SalesOrder[]
+
+  @@map("CUSTOMER")
+}
+
 model Product {
-  product_id   Int @id @default(autoincrement())
+  product_id   Int    @id @default(autoincrement())
   product_name String
   category     String
+  type         String @default("")
+  size         String @default("")
+  unit         String @default("")
   cost_price   Float
   retail_price Float
 
@@ -38,7 +61,7 @@ model Product {
 }
 
 model Warehouse {
-  warehouse_id   Int @id @default(autoincrement())
+  warehouse_id   Int    @id @default(autoincrement())
   warehouse_name String
 
   stocks           WarehouseStock[]
@@ -50,7 +73,7 @@ model Warehouse {
 }
 
 model Vehicle {
-  vehicle_id   Int @id @default(autoincrement())
+  vehicle_id   Int    @id @default(autoincrement())
   vehicle_name String
 
   stocks           VehicleStock[]
@@ -86,20 +109,20 @@ model VehicleStock {
 }
 
 model InventoryTransaction {
-  transaction_id   Int      @id @default(autoincrement())
-  transaction_type String
-  date_time        DateTime @default(now())
-  staff_id         Int
+  transaction_id    Int      @id @default(autoincrement())
+  transaction_type  String
+  date_time         DateTime @default(now())
+  staff_id          Int
   from_warehouse_id Int?
   to_warehouse_id   Int?
   from_vehicle_id   Int?
   to_vehicle_id     Int?
 
-  staff         Staff      @relation(fields: [staff_id], references: [staff_id])
-  fromWarehouse Warehouse? @relation("fromWarehouse", fields: [from_warehouse_id], references: [warehouse_id])
-  toWarehouse   Warehouse? @relation("toWarehouse", fields: [to_warehouse_id], references: [warehouse_id])
-  fromVehicle   Vehicle?   @relation("fromVehicle", fields: [from_vehicle_id], references: [vehicle_id])
-  toVehicle     Vehicle?   @relation("toVehicle", fields: [to_vehicle_id], references: [vehicle_id])
+  staff         Staff               @relation(fields: [staff_id], references: [staff_id])
+  fromWarehouse Warehouse?          @relation("fromWarehouse", fields: [from_warehouse_id], references: [warehouse_id])
+  toWarehouse   Warehouse?          @relation("toWarehouse", fields: [to_warehouse_id], references: [warehouse_id])
+  fromVehicle   Vehicle?            @relation("fromVehicle", fields: [from_vehicle_id], references: [vehicle_id])
+  toVehicle     Vehicle?            @relation("toVehicle", fields: [to_vehicle_id], references: [vehicle_id])
   details       TransactionDetail[]
 
   @@map("INVENTORY_TRANSACTION")
@@ -120,6 +143,7 @@ model TransactionDetail {
 model SalesOrder {
   order_id            Int      @id @default(autoincrement())
   customer_name       String   @default("Walk-in Customer")
+  customer_id         Int?
   order_date          DateTime @default(now())
   salesperson_id      Int
   source_vehicle_id   Int?
@@ -127,9 +151,10 @@ model SalesOrder {
   total_amount        Float
   is_paid             Boolean  @default(true)
 
-  salesperson     Staff      @relation(fields: [salesperson_id], references: [staff_id])
-  sourceVehicle   Vehicle?   @relation(fields: [source_vehicle_id], references: [vehicle_id])
-  sourceWarehouse Warehouse? @relation(fields: [source_warehouse_id], references: [warehouse_id])
+  salesperson     Staff               @relation(fields: [salesperson_id], references: [staff_id])
+  customer        Customer?           @relation(fields: [customer_id], references: [customer_id], onDelete: SetNull)
+  sourceVehicle   Vehicle?            @relation(fields: [source_vehicle_id], references: [vehicle_id])
+  sourceWarehouse Warehouse?          @relation(fields: [source_warehouse_id], references: [warehouse_id])
   details         SalesOrderDetail[]
   payments        SalesOrderPayment[]
 

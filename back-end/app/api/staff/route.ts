@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { withoutPassword } from "@/lib/staff";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "http://localhost:3001",
@@ -18,8 +20,8 @@ export async function GET() {
       orderBy: { staff_id: "asc" },
     });
 
-    return NextResponse.json(staff, { headers: corsHeaders });
-  } catch (error) {
+    return NextResponse.json(staff.map(withoutPassword), { headers: corsHeaders });
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch staff records" },
       { status: 500, headers: corsHeaders },
@@ -43,12 +45,12 @@ export async function POST(request: Request) {
       data: {
         staff_name: String(staff_name),
         username: String(username).trim(),
-        password: String(password),
+        password: await hashPassword(String(password)),
         role: String(role),
       },
     });
 
-    return NextResponse.json(staff, { status: 201, headers: corsHeaders });
+    return NextResponse.json(withoutPassword(staff), { status: 201, headers: corsHeaders });
   } catch (error) {
     if (
       error &&

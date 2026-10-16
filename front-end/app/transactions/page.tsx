@@ -29,6 +29,9 @@ type Transaction = {
 type Product = {
   product_id: number;
   product_name: string;
+  type: string;
+  size: string;
+  unit: string;
 };
 
 export default function TransactionsPage() {
@@ -68,7 +71,12 @@ export default function TransactionsPage() {
       : transactions.filter((t) => t.transaction_type === filterType);
 
   const getProductName = (productId: number): string => {
-    return products.find((p) => p.product_id === productId)?.product_name ?? `Product ${productId}`;
+    const product = products.find((p) => p.product_id === productId);
+    if (!product) return `Product ${productId}`;
+    const attributes = [product.type, [product.size, product.unit].filter(Boolean).join(" ")]
+      .filter(Boolean)
+      .join(", ");
+    return attributes ? `${product.product_name} (${attributes})` : product.product_name;
   };
 
   const getTransactionDescription = (transaction: Transaction): string => {

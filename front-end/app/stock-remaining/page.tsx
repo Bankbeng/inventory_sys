@@ -7,6 +7,9 @@ type Product = {
   product_id: number;
   product_name: string;
   category: string;
+  type: string;
+  size: string;
+  unit: string;
 };
 
 type Warehouse = {
@@ -36,6 +39,13 @@ type VehicleStock = {
 };
 
 type StockDisplayMode = "product" | "warehouse" | "vehicle";
+
+function getProductLabel(product: Pick<Product, "product_name" | "type" | "size" | "unit">) {
+  const attributes = [product.type, [product.size, product.unit].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
+  return attributes ? `${product.product_name} (${attributes})` : product.product_name;
+}
 
 export default function RemainingStockPage() {
   const [warehouseStocks, setWarehouseStocks] = useState<WarehouseStock[]>([]);
@@ -127,7 +137,7 @@ export default function RemainingStockPage() {
 
       return {
         product_id: product.product_id,
-        product_name: product.product_name,
+        product_name: getProductLabel(product),
         warehouseEntries,
         vehicleEntries,
         totalQty: warehouseQty + vehicleQty,
@@ -229,7 +239,7 @@ export default function RemainingStockPage() {
                     {visibleWarehouseStocks.length > 0 ? visibleWarehouseStocks.map((item) => (
                       <tr key={`${item.warehouse_id}-${item.product_id}`} className={item.quantity <= 10 ? "bg-amber-500/5" : ""}>
                         <td className="px-3 py-3 text-slate-700">{item.warehouse?.warehouse_name ?? `Warehouse ${item.warehouse_id}`}</td>
-                        <td className="px-3 py-3 text-slate-700">{item.product?.product_name ?? `Product ${item.product_id}`}</td>
+                        <td className="px-3 py-3 text-slate-700">{item.product ? getProductLabel(item.product) : `Product ${item.product_id}`}</td>
                         <td className={`px-3 py-3 font-medium ${item.quantity <= 10 ? "text-amber-700" : "text-emerald-700"}`}>{item.quantity}</td>
                       </tr>
                     )) : (
@@ -254,7 +264,7 @@ export default function RemainingStockPage() {
                     {visibleVehicleStocks.length > 0 ? visibleVehicleStocks.map((item) => (
                       <tr key={`${item.vehicle_id}-${item.product_id}`} className={item.quantity <= 10 ? "bg-rose-500/5" : ""}>
                         <td className="px-3 py-3 text-slate-700">{item.vehicle?.vehicle_name ?? `Vehicle ${item.vehicle_id}`}</td>
-                        <td className="px-3 py-3 text-slate-700">{item.product?.product_name ?? `Product ${item.product_id}`}</td>
+                        <td className="px-3 py-3 text-slate-700">{item.product ? getProductLabel(item.product) : `Product ${item.product_id}`}</td>
                         <td className={`px-3 py-3 font-medium ${item.quantity <= 10 ? "text-rose-700" : "text-emerald-700"}`}>{item.quantity}</td>
                       </tr>
                     )) : (

@@ -10,13 +10,28 @@ type Receivable = {
   total_amount: number;
   order_date: string;
   is_paid: boolean;
+  customer?: {
+    phone_number: string | null;
+    place_link: string | null;
+  } | null;
   salesperson?: { staff_name: string };
+  details: {
+    product_id: number;
+    quantity_sold: number;
+    sold_at_price: number;
+    product?: { product_name: string };
+  }[];
   payments: {
     payment_id: number;
     amount: number;
     paid_at: string;
     note: string | null;
   }[];
+};
+
+type ReportGroup = {
+  name: string;
+  orders: Receivable[];
 };
 
 function getOutstanding(order: Receivable) {
@@ -36,6 +51,45 @@ function getDebtDays(order: Receivable) {
   return Math.max(0, Math.floor((endDay - startDay) / 86_400_000));
 }
 
+function groupOutstandingOrders(
+  orders: Receivable[],
+  groupBy: "salesperson" | "customer",
+): ReportGroup[] {
+  const groups = new Map<string, ReportGroup>();
+
+  for (const order of orders) {
+    const outstanding = getOutstanding(order);
+    if (outstanding <= 0.000001) continue;
+
+    const name = groupBy === "salesperson"
+      ? order.salesperson?.staff_name?.trim() || "Unknown"
+      : order.customer_name?.trim() || "Unknown";
+    const group = groups.get(name) ?? { name, orders: [] };
+    group.orders.push(order);
+    groups.set(name, group);
+  }
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      orders: group.orders.sort(
+        (left, right) => new Date(left.order_date).getTime() - new Date(right.order_date).getTime(),
+      ),
+    }))
+    .sort(
+      (left, right) => getGroupOutstanding(right) - getGroupOutstanding(left) ||
+        left.name.localeCompare(right.name),
+    );
+}
+
+function getGroupOutstanding(group: ReportGroup) {
+  return group.orders.reduce((sum, order) => sum + getOutstanding(order), 0);
+}
+
+function getGroupPaid(group: ReportGroup) {
+  return group.orders.reduce((sum, order) => sum + order.total_amount - getOutstanding(order), 0);
+}
+
 export default function AccountsReceivablePage() {
   const [orders, setOrders] = useState<Receivable[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +97,8 @@ export default function AccountsReceivablePage() {
   const [paymentAmounts, setPaymentAmounts] = useState<Record<number, string>>({});
   const [paymentNotes, setPaymentNotes] = useState<Record<number, string>>({});
   const [showSettledOrders, setShowSettledOrders] = useState(false);
+  const [reportGroupBy, setReportGroupBy] = useState<"salesperson" | "customer">("salesperson");
+  const [reportEntity, setReportEntity] = useState("all");
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -80,6 +136,15 @@ export default function AccountsReceivablePage() {
   const visibleOrders = showSettledOrders
     ? orders
     : orders.filter((order) => getOutstanding(order) > 0.000001);
+  const reportGroups = useMemo(
+    () => groupOutstandingOrders(orders, reportGroupBy),
+    [orders, reportGroupBy],
+  );
+  const visibleReportGroups = reportEntity === "all"
+    ? reportGroups
+    : reportGroups.filter((group) => group.name === reportEntity);
+  const reportTotal = visibleReportGroups.reduce((sum, group) => sum + getGroupOutstanding(group), 0);
+  const reportOrderCount = visibleReportGroups.reduce((sum, group) => sum + group.orders.length, 0);
 
   async function recordPayment(orderId: number) {
     const amount = Number(paymentAmounts[orderId]);
@@ -103,9 +168,11 @@ export default function AccountsReceivablePage() {
         throw new Error(data.error || "Failed to record payment.");
       }
 
-      const updatedOrder = data as Receivable;
+      const updatedOrder = data as Partial<Receivable>;
       setOrders((currentOrders) =>
-        currentOrders.map((order) => order.order_id === orderId ? updatedOrder : order),
+        currentOrders.map((order) =>
+          order.order_id === orderId ? { ...order, ...updatedOrder } : order,
+        ),
       );
       setPaymentAmounts((current) => ({ ...current, [orderId]: "" }));
       setPaymentNotes((current) => ({ ...current, [orderId]: "" }));
@@ -134,6 +201,189 @@ export default function AccountsReceivablePage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-slate-500">Unpaid orders</p>
             <p className="mt-2 text-3xl font-bold text-slate-900">{outstandingCount}</p>
+          </div>
+        </section>
+
+        <section className="print-report mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 print:hidden">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Outstanding receivables report</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Order-by-order balances, products, and payment history grouped by salesperson or customer.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="receivable-report-group">Group report by</label>
+              <select
+                id="receivable-report-group"
+                value={reportGroupBy}
+                onChange={(event) => {
+                  setReportGroupBy(event.target.value as "salesperson" | "customer");
+                  setReportEntity("all");
+                }}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
+              >
+                <option value="salesperson">By salesperson</option>
+                <option value="customer">By customer</option>
+              </select>
+              <label className="sr-only" htmlFor="receivable-report-entity">
+                Select {reportGroupBy === "salesperson" ? "salesperson" : "customer"}
+              </label>
+              <select
+                id="receivable-report-entity"
+                value={reportEntity}
+                onChange={(event) => setReportEntity(event.target.value)}
+                className="min-w-48 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
+              >
+                <option value="all">
+                  All {reportGroupBy === "salesperson" ? "salespeople" : "customers"}
+                </option>
+                {reportGroups.map((group) => (
+                  <option key={group.name} value={group.name}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                disabled={loading || visibleReportGroups.length === 0}
+                className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Print report
+              </button>
+            </div>
+          </div>
+
+          <div className="p-5">
+            <div className="mb-5 hidden print:block">
+              <h1 className="text-2xl font-bold">Outstanding receivables report</h1>
+              <p className="mt-1 text-sm">
+                Grouped by {reportGroupBy === "salesperson" ? "salesperson" : "customer"} ·
+                {" "}{reportEntity === "all" ? "All" : reportEntity} ·
+                {" "}Printed {new Date().toLocaleString()}
+              </p>
+              <p className="mt-2 text-sm">
+                {reportOrderCount} outstanding orders · {formatCurrency(reportTotal)} remaining
+              </p>
+            </div>
+            {loading ? (
+              <p className="py-5 text-sm text-slate-500">Loading report...</p>
+            ) : visibleReportGroups.length === 0 ? (
+              <p className="py-5 text-sm text-slate-500">
+                {reportEntity === "all"
+                  ? "There are no outstanding balances to report."
+                  : `No outstanding balances for ${reportEntity}.`}
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {visibleReportGroups.map((group) => (
+                  <section key={group.name} className="overflow-hidden rounded-xl border border-slate-200 print:break-inside-avoid">
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 px-4 py-3">
+                      <div>
+                        <h3 className="font-semibold text-slate-900">{group.name}</h3>
+                        {reportGroupBy === "customer" && (
+                          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                            {group.orders[0]?.customer?.phone_number && (
+                              <span>Phone: {group.orders[0].customer.phone_number}</span>
+                            )}
+                            {group.orders[0]?.customer?.place_link && (
+                              <a
+                                href={group.orders[0].customer.place_link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-cyan-700 underline print:text-black"
+                              >
+                                Customer map
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-right text-xs text-slate-600">
+                        {group.orders.length} unpaid {group.orders.length === 1 ? "order" : "orders"} ·
+                        {" "}{formatCurrency(getGroupOutstanding(group))} due ·
+                        {" "}{formatCurrency(getGroupPaid(group))} paid
+                      </p>
+                    </div>
+
+                    {group.orders.map((order) => {
+                      const outstanding = getOutstanding(order);
+                      const paid = order.total_amount - outstanding;
+                      return (
+                        <article key={order.order_id} className="border-t border-slate-200 p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h4 className="font-semibold text-slate-900">SO-{order.order_id} · {order.customer_name}</h4>
+                              <p className="mt-1 text-xs text-slate-600">
+                                Salesperson: {order.salesperson?.staff_name ?? "Unknown"} ·
+                                {" "}Order date: {new Date(order.order_date).toLocaleDateString()} ·
+                                {" "}{getDebtDays(order)} {getDebtDays(order) === 1 ? "day" : "days"} outstanding
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-x-4 text-right text-xs">
+                              <span className="text-slate-500">Order total</span>
+                              <span className="text-slate-500">Paid</span>
+                              <span className="font-semibold text-amber-700">Balance due</span>
+                              <span className="font-medium text-slate-900">{formatCurrency(order.total_amount)}</span>
+                              <span className="font-medium text-emerald-700">{formatCurrency(paid)}</span>
+                              <span className="font-bold text-amber-700">{formatCurrency(outstanding)}</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 grid gap-4 md:grid-cols-2">
+                            <div>
+                              <h5 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Items</h5>
+                              {order.details.length > 0 ? (
+                                <ul className="space-y-1 text-xs text-slate-700">
+                                  {order.details.map((detail) => (
+                                    <li key={`${order.order_id}-${detail.product_id}`} className="flex justify-between gap-3">
+                                      <span>
+                                        {detail.product?.product_name ?? `Product ${detail.product_id}`} × {detail.quantity_sold}
+                                        {" "}@ {formatCurrency(detail.sold_at_price)}
+                                      </span>
+                                      <span className="shrink-0 font-medium">
+                                        {formatCurrency(detail.quantity_sold * detail.sold_at_price)}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-xs text-slate-500">No item details available.</p>
+                              )}
+                            </div>
+                            <div>
+                              <h5 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Payment history</h5>
+                              {order.payments.length > 0 ? (
+                                <ul className="space-y-1 text-xs text-slate-700">
+                                  {order.payments.map((payment) => (
+                                    <li key={payment.payment_id} className="flex justify-between gap-3">
+                                      <span>
+                                        {new Date(payment.paid_at).toLocaleDateString()}
+                                        {payment.note ? ` · ${payment.note}` : ""}
+                                      </span>
+                                      <span className="shrink-0 font-medium">{formatCurrency(Number(payment.amount))}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-xs text-slate-500">No payments recorded.</p>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </section>
+                ))}
+
+                <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 border-t-2 border-slate-300 pt-4 text-sm">
+                  <span>{reportOrderCount} unpaid orders</span>
+                  <span>Total paid: <strong>{formatCurrency(visibleReportGroups.reduce((sum, group) => sum + getGroupPaid(group), 0))}</strong></span>
+                  <span>Total outstanding: <strong>{formatCurrency(reportTotal)}</strong></span>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -265,6 +515,41 @@ export default function AccountsReceivablePage() {
           )}
         </section>
       </div>
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: auto;
+            margin: 16mm;
+          }
+
+          body * {
+            visibility: hidden !important;
+          }
+
+          .print-report,
+          .print-report * {
+            visibility: visible !important;
+          }
+
+          .print-report {
+            position: absolute !important;
+            inset: 0 auto auto 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            border: 0 !important;
+            box-shadow: none !important;
+          }
+
+          .print-report section,
+          .print-report article {
+            break-inside: avoid;
+          }
+
+          .print-report .overflow-hidden {
+            overflow: visible !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }

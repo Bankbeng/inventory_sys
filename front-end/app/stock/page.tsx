@@ -6,6 +6,9 @@ import { API_BASE_URL } from "@/lib/config";
 type Product = {
   product_id: number;
   product_name: string;
+  type: string;
+  size: string;
+  unit: string;
 };
 
 type Warehouse = {
@@ -18,11 +21,6 @@ type Vehicle = {
   vehicle_name: string;
 };
 
-type Staff = {
-  staff_id: number;
-  staff_name: string;
-};
-
 type MovementItem = {
   productId: string;
   quantity: string;
@@ -32,17 +30,33 @@ type MovementForm = {
   movementType: "in" | "out" | "transfer";
   sourceLocationType: "warehouse" | "vehicle";
   destinationLocationType: "warehouse" | "vehicle";
-  staffId: string;
   items: MovementItem[];
   sourceId: string;
   destinationId: string;
 };
 
+type MovementPayload = {
+  movement_type: MovementForm["movementType"];
+  from_location_type: MovementForm["sourceLocationType"];
+  to_location_type: MovementForm["destinationLocationType"];
+  items: { product_id: number; quantity: number }[];
+  from_warehouse_id?: number;
+  to_warehouse_id?: number;
+  from_vehicle_id?: number;
+  to_vehicle_id?: number;
+};
+
+function getProductLabel(product: Product) {
+  const attributes = [product.type, [product.size, product.unit].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
+  return attributes ? `${product.product_name} (${attributes})` : product.product_name;
+}
+
 const initialForm: MovementForm = {
   movementType: "in",
   sourceLocationType: "warehouse",
   destinationLocationType: "warehouse",
-  staffId: "1",
   items: [{ productId: "", quantity: "1" }],
   sourceId: "",
   destinationId: "",
@@ -52,7 +66,6 @@ export default function StockPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -60,24 +73,21 @@ export default function StockPage() {
 
   async function loadStockData() {
     try {
-      const [productResponse, warehouseListResponse, vehicleListResponse, staffResponse] = await Promise.all([
+      const [productResponse, warehouseListResponse, vehicleListResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/api/products`),
         fetch(`${API_BASE_URL}/api/warehouses`),
         fetch(`${API_BASE_URL}/api/vehicles`),
-        fetch(`${API_BASE_URL}/api/staff`),
       ]);
 
-      const [productData, warehouseListData, vehicleListData, staffData] = await Promise.all([
+      const [productData, warehouseListData, vehicleListData] = await Promise.all([
         productResponse.json(),
         warehouseListResponse.json(),
         vehicleListResponse.json(),
-        staffResponse.json(),
       ]);
 
       setProducts(Array.isArray(productData) ? productData : []);
       setWarehouses(Array.isArray(warehouseListData) ? warehouseListData : []);
       setVehicles(Array.isArray(vehicleListData) ? vehicleListData : []);
-      setStaff(Array.isArray(staffData) ? staffData : []);
 
       if (productData[0]) {
         setForm((current) => ({
@@ -86,10 +96,6 @@ export default function StockPage() {
             index === 0 ? { ...item, productId: String(productData[0].product_id) } : item,
           ),
         }));
-      }
-
-      if (staffData[0]) {
-        setForm((current) => ({ ...current, staffId: String(staffData[0].staff_id) }));
       }
     } catch (error) {
       console.error("Failed to load stock data", error);
@@ -167,11 +173,10 @@ export default function StockPage() {
     setMessage(null);
 
     try {
-      const payload: any = {
+      const payload: MovementPayload = {
         movement_type: form.movementType,
         from_location_type: form.sourceLocationType,
         to_location_type: form.destinationLocationType,
-        staff_id: Number(form.staffId),
         items: validItems.map((item) => ({
           product_id: Number(item.productId),
           quantity: Number(item.quantity),
@@ -292,18 +297,6 @@ export default function StockPage() {
               </label>
             )}
 
-            <label className="text-sm text-slate-700">
-              <span className="mb-2 block">Staff</span>
-              <select
-                value={form.staffId}
-                onChange={(event) => setForm((current) => ({ ...current, staffId: event.target.value }))}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
-              >
-                {staff.map((member) => (
-                  <option key={member.staff_id} value={member.staff_id}>{member.staff_name}</option>
-                ))}
-              </select>
-            </label>
 
             <div className="md:col-span-2 xl:col-span-3">
               <div className="mb-2 flex items-center justify-between gap-3">
@@ -329,7 +322,7 @@ export default function StockPage() {
                       >
                         <option value="">Select product</option>
                         {products.map((product) => (
-                          <option key={product.product_id} value={product.product_id}>{product.product_name}</option>
+                          <option key={product.product_id} value={product.product_id}>{getProductLabel(product)}</option>
                         ))}
                       </select>
                     </label>

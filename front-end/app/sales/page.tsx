@@ -8,12 +8,17 @@ import BrandMark from "../components/BrandMark";
 type Product = {
   product_id: number;
   product_name: string;
+  type: string;
+  size: string;
+  unit: string;
   retail_price: number;
 };
 
-type Staff = {
-  staff_id: number;
-  staff_name: string;
+type Customer = {
+  customer_id: number;
+  customer_name: string;
+  phone_number?: string | null;
+  place_link?: string | null;
 };
 
 type Warehouse = {
@@ -30,12 +35,13 @@ type OrderDetail = {
   product_id: number;
   quantity_sold: number;
   sold_at_price: number;
-  product?: { product_name: string };
+  product?: Pick<Product, "product_id" | "product_name" | "type" | "size" | "unit">;
 };
 
 type SalesOrder = {
   order_id: number;
   customer_name?: string;
+  customer?: Pick<Customer, "customer_name" | "phone_number" | "place_link"> | null;
   total_amount: number;
   is_paid: boolean;
   order_date: string;
@@ -52,8 +58,7 @@ type SaleLine = {
 };
 
 type SaleForm = {
-  customerName: string;
-  salespersonId: string;
+  customerId: string;
   paymentStatus: "paid" | "unpaid";
   sourceType: "warehouse" | "vehicle";
   sourceId: string;
@@ -67,59 +72,81 @@ const buildEmptyLine = (): SaleLine => ({
 });
 
 const initialForm: SaleForm = {
-  customerName: "",
-  salespersonId: "",
+  customerId: "",
   paymentStatus: "paid",
   sourceType: "warehouse",
   sourceId: "",
   lines: [buildEmptyLine()],
 };
 
+function getProductLabel(product: Pick<Product, "product_name" | "type" | "size" | "unit">) {
+  const attributes = [product.type, [product.size, product.unit].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
+  return attributes ? `${product.product_name} (${attributes})` : product.product_name;
+}
+
+function getInvoiceNumber(order: Pick<SalesOrder, "order_id" | "order_date">) {
+  const year = new Date(order.order_date).getFullYear().toString().slice(-2);
+  return `IV${year}-${String(order.order_id).padStart(5, "0")}`;
+}
+
+function getDueDate(orderDate: string) {
+  const dueDate = new Date(orderDate);
+  dueDate.setDate(dueDate.getDate() + 30);
+  return dueDate.toLocaleDateString();
+}
+
+function getSizeInLiters(size?: string) {
+  const match = size?.trim().match(/^(\d+(?:[.,]\d+)?)\s*(?:l|lt|ltr|liter|liters)$/i);
+  return match ? Number(match[1].replace(",", ".")) : null;
+}
+
 export default function SalesPage() {
   const [sales, setSales] = useState<SalesOrder[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [staff, setStaff] = useState<Staff[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [receiptOrder, setReceiptOrder] = useState<SalesOrder | null>(null);
+  const [invoiceOrder, setInvoiceOrder] = useState<SalesOrder | null>(null);
   const [form, setForm] = useState<SaleForm>(initialForm);
 
   async function loadSalesData() {
     try {
-      const [salesResponse, productResponse, staffResponse, warehouseResponse, vehicleResponse] = await Promise.all([
+      const [salesResponse, productResponse, warehouseResponse, vehicleResponse, customerResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/api/sales-orders`),
         fetch(`${API_BASE_URL}/api/products`),
-        fetch(`${API_BASE_URL}/api/staff`),
         fetch(`${API_BASE_URL}/api/warehouses`),
         fetch(`${API_BASE_URL}/api/vehicles`),
+        fetch(`${API_BASE_URL}/api/customers`),
       ]);
 
-      const [salesData, productData, staffData, warehouseData, vehicleData] = await Promise.all([
+      if (!customerResponse.ok) {
+        throw new Error("Failed to load customer records.");
+      }
+
+      const [salesData, productData, warehouseData, vehicleData, customerData] = await Promise.all([
         salesResponse.json(),
         productResponse.json(),
-        staffResponse.json(),
         warehouseResponse.json(),
         vehicleResponse.json(),
+        customerResponse.json(),
       ]);
 
       const nextSales = Array.isArray(salesData) ? salesData : [];
       const nextProducts = Array.isArray(productData) ? productData : [];
-      const nextStaff = Array.isArray(staffData) ? staffData : [];
       const nextWarehouses = Array.isArray(warehouseData) ? warehouseData : [];
       const nextVehicles = Array.isArray(vehicleData) ? vehicleData : [];
+      const nextCustomers = Array.isArray(customerData) ? customerData : [];
 
       setSales(nextSales);
       setProducts(nextProducts);
-      setStaff(nextStaff);
       setWarehouses(nextWarehouses);
       setVehicles(nextVehicles);
-
-      if (!form.salespersonId && nextStaff[0]) {
-        setForm((current) => ({ ...current, salespersonId: String(nextStaff[0].staff_id) }));
-      }
+      setCustomers(nextCustomers);
 
       if (nextProducts[0]) {
         setForm((current) => ({
@@ -142,7 +169,7 @@ export default function SalesPage() {
   }
 
   useEffect(() => {
-    loadSalesData();
+    void Promise.resolve().then(loadSalesData);
   }, []);
 
   const sourceOptions = form.sourceType === "warehouse" ? warehouses : vehicles;
@@ -156,6 +183,21 @@ export default function SalesPage() {
       }, 0),
     [form.lines],
   );
+
+  const invoiceDetails = invoiceOrder?.details ?? [];
+  const invoiceSubtotal = invoiceDetails.reduce(
+    (sum, detail) => sum + Number(detail.quantity_sold) * Number(detail.sold_at_price),
+    0,
+  );
+  const invoiceQuantity = invoiceDetails.reduce((sum, detail) => sum + Number(detail.quantity_sold), 0);
+  const detailLiters = invoiceDetails.map((detail) => {
+    const sizeInLiters = getSizeInLiters(detail.product?.size);
+    return sizeInLiters === null ? null : sizeInLiters * Number(detail.quantity_sold);
+  });
+  const invoiceLiters =
+    detailLiters.length > 0 && detailLiters.every((liters) => liters !== null)
+      ? detailLiters.reduce<number>((sum, liters) => sum + (liters ?? 0), 0)
+      : null;
 
   const addLine = () => {
     const nextProduct = products[0];
@@ -198,13 +240,8 @@ export default function SalesPage() {
       return Number.isInteger(productId) && productId > 0 && Number.isFinite(quantity) && quantity > 0 && Number.isFinite(price) && price >= 0;
     });
 
-    if (!form.customerName.trim()) {
-      setMessage("Please enter the customer name.");
-      return;
-    }
-
-    if (!form.salespersonId) {
-      setMessage("Please select a salesperson.");
+    if (!form.customerId) {
+      setMessage("Please select a customer.");
       return;
     }
 
@@ -223,8 +260,7 @@ export default function SalesPage() {
 
     try {
       const payload = {
-        customer_name: form.customerName.trim(),
-        salesperson_id: Number(form.salespersonId),
+        customer_id: Number(form.customerId),
         is_paid: form.paymentStatus === "paid",
         ...(form.sourceType === "warehouse"
           ? { source_warehouse_id: Number(form.sourceId) }
@@ -250,8 +286,7 @@ export default function SalesPage() {
       }
 
       setForm({
-        customerName: "",
-        salespersonId: form.salespersonId,
+        customerId: "",
         paymentStatus: "paid",
         sourceType: "warehouse",
         sourceId: warehouses[0] ? String(warehouses[0].warehouse_id) : "",
@@ -280,29 +315,25 @@ export default function SalesPage() {
         <form onSubmit={handleSubmit} className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="grid gap-4 md:grid-cols-4">
             <label className="text-sm text-slate-700 md:col-span-2">
-              <span className="mb-2 block">Customer name</span>
-              <input
-                value={form.customerName}
-                onChange={(event) => setForm((current) => ({ ...current, customerName: event.target.value }))}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
-                placeholder="John Doe"
-              />
-            </label>
-
-            <label className="text-sm text-slate-700">
-              <span className="mb-2 block">Salesperson</span>
+              <span className="mb-2 block">Customer</span>
               <select
-                value={form.salespersonId}
-                onChange={(event) => setForm((current) => ({ ...current, salespersonId: event.target.value }))}
+                required
+                value={form.customerId}
+                onChange={(event) => setForm((current) => ({ ...current, customerId: event.target.value }))}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
               >
-                <option value="">Select salesperson</option>
-                {staff.map((member) => (
-                  <option key={member.staff_id} value={member.staff_id}>
-                    {member.staff_name}
+                <option value="">Select customer</option>
+                {customers.map((customer) => (
+                  <option key={customer.customer_id} value={customer.customer_id}>
+                    {customer.customer_name}
                   </option>
                 ))}
               </select>
+              {customers.length === 0 && (
+                <span className="mt-1 block text-xs text-slate-500">
+                  No customers yet. <a href="/customers" className="text-cyan-700 underline">Add a customer</a>.
+                </span>
+              )}
             </label>
 
             <label className="text-sm text-slate-700">
@@ -395,7 +426,7 @@ export default function SalesPage() {
                     <option value="">Select product</option>
                     {products.map((product) => (
                       <option key={product.product_id} value={product.product_id}>
-                        {product.product_name}
+                        {getProductLabel(product)}
                       </option>
                     ))}
                   </select>
@@ -483,7 +514,7 @@ export default function SalesPage() {
                   <th className="px-4 py-3 font-medium">Amount</th>
                   <th className="px-4 py-3 font-medium">Date</th>
                   <th className="px-4 py-3 font-medium">Payment</th>
-                  <th className="px-4 py-3 font-medium">Receipt</th>
+                  <th className="px-4 py-3 font-medium">Invoice</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -491,7 +522,7 @@ export default function SalesPage() {
                   sales.map((item) => {
                     const sourceName = item.sourceWarehouse?.warehouse_name ?? item.sourceVehicle?.vehicle_name ?? "Unknown";
                     const itemSummary = item.details
-                      ?.map((detail) => `${detail.product?.product_name ?? `Product ${detail.product_id}`} (${detail.quantity_sold})`)
+                      ?.map((detail) => `${detail.product ? getProductLabel(detail.product) : `Product ${detail.product_id}`} (${detail.quantity_sold})`)
                       .join(", ") ?? "No items";
 
                     return (
@@ -514,10 +545,10 @@ export default function SalesPage() {
                         <td className="px-4 py-3">
                           <button
                             type="button"
-                            onClick={() => setReceiptOrder(item)}
+                            onClick={() => setInvoiceOrder(item)}
                             className="font-medium text-cyan-700 underline decoration-cyan-300 underline-offset-4 hover:text-cyan-900"
                           >
-                            Receipt
+                            Invoice
                           </button>
                         </td>
                       </tr>
@@ -536,87 +567,138 @@ export default function SalesPage() {
         )}
       </div>
 
-      {receiptOrder && (
-        <div className="receipt-overlay" role="presentation" onClick={() => setReceiptOrder(null)}>
+      {invoiceOrder && (
+        <div className="invoice-overlay" role="presentation" onClick={() => setInvoiceOrder(null)}>
           <div
-            className="receipt-dialog"
+            className="invoice-dialog"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="receipt-title"
+            aria-labelledby="invoice-title"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="receipt-toolbar">
+            <div className="invoice-toolbar">
               <button
                 type="button"
                 onClick={() => window.print()}
                 className="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800"
               >
-                Print receipt
+                Print invoice
               </button>
               <button
                 type="button"
-                onClick={() => setReceiptOrder(null)}
+                onClick={() => setInvoiceOrder(null)}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
               >
                 Close
               </button>
             </div>
-            <article className="receipt-paper">
-              <header className="receipt-header">
-                <BrandMark />
-                <p className="receipt-subtitle">Sales receipt</p>
+            <article className="invoice-paper">
+              <header className="invoice-header">
+                <div className="invoice-company">
+                  <BrandMark />
+                  <strong>LAO SOLE CO., LTD.</strong>
+                </div>
+                <h1 id="invoice-title">Invoice</h1>
               </header>
 
-              <div className="receipt-order-details">
+              <div className="invoice-order-details">
                 <div>
-                  <h2 id="receipt-title">Order SO-{receiptOrder.order_id}</h2>
-                  <p>{new Date(receiptOrder.order_date).toLocaleString()}</p>
+                  <h2>Bill to</h2>
+                  <strong>{invoiceOrder.customer?.customer_name ?? invoiceOrder.customer_name ?? "Walk-in Customer"}</strong>
+                  <p>Tel: {invoiceOrder.customer?.phone_number || "—"}</p>
+                  <p>Customer Tax ID: Not set</p>
+                  {invoiceOrder.customer?.place_link && <p>Location: {invoiceOrder.customer.place_link}</p>}
                 </div>
-                <div className="receipt-customer">
-                  <span>Customer</span>
-                  <strong>{receiptOrder.customer_name ?? "Walk-in Customer"}</strong>
-                </div>
+                <dl className="invoice-meta">
+                  <div>
+                    <dt>Invoice No.</dt>
+                    <dd>{getInvoiceNumber(invoiceOrder)}</dd>
+                  </div>
+                  <div>
+                    <dt>Refer No.</dt>
+                    <dd>SO-{invoiceOrder.order_id}</dd>
+                  </div>
+                  <div>
+                    <dt>Date</dt>
+                    <dd>{new Date(invoiceOrder.order_date).toLocaleDateString()}</dd>
+                  </div>
+                  <div>
+                    <dt>Credit term</dt>
+                    <dd>30 days</dd>
+                  </div>
+                  <div>
+                    <dt>Due date</dt>
+                    <dd>{getDueDate(invoiceOrder.order_date)}</dd>
+                  </div>
+                  <div>
+                    <dt>Sales</dt>
+                    <dd>{invoiceOrder.salesperson?.staff_name ?? "Unknown"}</dd>
+                  </div>
+                  <div>
+                    <dt>Payment status</dt>
+                    <dd>{invoiceOrder.is_paid ? "Paid" : "Unpaid"}</dd>
+                  </div>
+                </dl>
               </div>
 
-              <dl className="receipt-meta">
-                <div>
-                  <dt>Salesperson</dt>
-                  <dd>{receiptOrder.salesperson?.staff_name ?? "Unknown"}</dd>
-                </div>
-                <div>
-                  <dt>Source</dt>
-                  <dd>{receiptOrder.sourceWarehouse?.warehouse_name ?? receiptOrder.sourceVehicle?.vehicle_name ?? "Unknown"}</dd>
-                </div>
-              </dl>
-
-              <table className="receipt-items">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>Unit price</th>
-                    <th>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {receiptOrder.details?.map((detail) => (
-                    <tr key={`${receiptOrder.order_id}-${detail.product_id}`}>
-                      <td>{detail.product?.product_name ?? `Product ${detail.product_id}`}</td>
-                      <td>{detail.quantity_sold}</td>
-                      <td>{formatCurrency(Number(detail.sold_at_price))}</td>
-                      <td>{formatCurrency(Number(detail.quantity_sold) * Number(detail.sold_at_price))}</td>
+              <div className="invoice-items-wrap">
+                <table className="invoice-items">
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>Product code</th>
+                      <th>Product description</th>
+                      <th>Type</th>
+                      <th>Size</th>
+                      <th>QTY</th>
+                      <th>Unit</th>
+                      <th>Total liters</th>
+                      <th>Unit price</th>
+                      <th>Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <th colSpan={3}>Total</th>
-                    <th>{formatCurrency(Number(receiptOrder.total_amount || 0))}</th>
-                  </tr>
-                </tfoot>
-              </table>
+                  </thead>
+                  <tbody>
+                    {invoiceDetails.map((detail, index) => {
+                      const liters = detailLiters[index];
+                      return (
+                        <tr key={`${invoiceOrder.order_id}-${detail.product_id}`}>
+                          <td>{index + 1}</td>
+                          <td>{detail.product?.product_id ?? detail.product_id}</td>
+                          <td>{detail.product?.product_name ?? `Product ${detail.product_id}`}</td>
+                          <td>{detail.product?.type || "—"}</td>
+                          <td>{detail.product?.size || "—"}</td>
+                          <td>{detail.quantity_sold}</td>
+                          <td>{detail.product?.unit || "—"}</td>
+                          <td>{liters === null ? "—" : liters.toLocaleString()}</td>
+                          <td>{formatCurrency(Number(detail.sold_at_price))}</td>
+                          <td>{formatCurrency(Number(detail.quantity_sold) * Number(detail.sold_at_price))}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th colSpan={5}>Total</th>
+                      <th>{invoiceQuantity}</th>
+                      <th></th>
+                      <th>{invoiceLiters === null ? "—" : invoiceLiters.toLocaleString()}</th>
+                      <th></th>
+                      <th>{formatCurrency(invoiceSubtotal)}</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
 
-              <p className="receipt-thanks">Thank you for your purchase.</p>
+              <div className="invoice-summary">
+                <dl>
+                  <div className="invoice-grand-total">
+                    <dt>Grand total</dt>
+                    <dd>{formatCurrency(Number(invoiceOrder.total_amount || 0))}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <p className="invoice-thanks">Thank you for your business.</p>
             </article>
           </div>
         </div>

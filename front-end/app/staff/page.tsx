@@ -18,6 +18,16 @@ type StaffFormState = {
   role: string;
 };
 
+type RolePage = {
+  path: string;
+  label: string;
+};
+
+type RolePermission = {
+  role_name: string;
+  accessible_pages: string[];
+};
+
 const emptyForm: StaffFormState = {
   staff_name: "",
   username: "",
@@ -32,6 +42,12 @@ export default function StaffPage() {
   const [form, setForm] = useState<StaffFormState>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [permissionPages, setPermissionPages] = useState<RolePage[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
+  const [selectedPermissionRole, setSelectedPermissionRole] = useState("");
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
+  const [permissionsSaving, setPermissionsSaving] = useState(false);
+  const [permissionsMessage, setPermissionsMessage] = useState<string | null>(null);
 
   async function loadStaff() {
     try {
@@ -46,9 +62,78 @@ export default function StaffPage() {
     }
   }
 
+  async function loadRolePermissions() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/role-permissions`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load role permissions.");
+      }
+      const roles: RolePermission[] = Array.isArray(data.roles) ? data.roles : [];
+      setPermissionPages(Array.isArray(data.pages) ? data.pages : []);
+      setRolePermissions(roles);
+      setSelectedPermissionRole((current) =>
+        roles.some((role) => role.role_name === current) ? current : roles[0]?.role_name ?? "",
+      );
+    } catch (error) {
+      console.error("Failed to load role permissions", error);
+      setPermissionsMessage(error instanceof Error ? error.message : "Failed to load role permissions.");
+    } finally {
+      setPermissionsLoading(false);
+    }
+  }
+
   useEffect(() => {
-    loadStaff();
+    void Promise.resolve().then(() => {
+      void loadStaff();
+      void loadRolePermissions();
+    });
   }, []);
+
+  const selectedRolePermissions = rolePermissions.find(
+    (role) => role.role_name === selectedPermissionRole,
+  );
+
+  function togglePagePermission(pagePath: string, checked: boolean) {
+    setRolePermissions((current) =>
+      current.map((role) =>
+        role.role_name === selectedPermissionRole
+          ? {
+              ...role,
+              accessible_pages: checked
+                ? [...role.accessible_pages, pagePath]
+                : role.accessible_pages.filter((page) => page !== pagePath),
+            }
+          : role,
+      ),
+    );
+  }
+
+  async function saveRolePermissions() {
+    if (!selectedRolePermissions) return;
+    setPermissionsSaving(true);
+    setPermissionsMessage(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/role-permissions`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role_name: selectedRolePermissions.role_name,
+          accessible_pages: selectedRolePermissions.accessible_pages,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save role permissions.");
+      }
+      setPermissionsMessage(`Permissions saved for ${selectedRolePermissions.role_name}.`);
+    } catch (error) {
+      console.error("Failed to save role permissions", error);
+      setPermissionsMessage(error instanceof Error ? error.message : "Failed to save role permissions.");
+    } finally {
+      setPermissionsSaving(false);
+    }
+  }
 
   const handleChange = (field: keyof StaffFormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -101,6 +186,7 @@ export default function StaffPage() {
 
       resetForm();
       await loadStaff();
+      await loadRolePermissions();
       setMessage(editingId ? "Staff updated successfully." : "Staff added successfully.");
     } catch (error) {
       console.error("Staff save failed", error);
@@ -130,6 +216,7 @@ export default function StaffPage() {
       }
 
       await loadStaff();
+      await loadRolePermissions();
       if (editingId === staffId) {
         resetForm();
       }
@@ -160,6 +247,72 @@ export default function StaffPage() {
             <h1 className="mt-2 text-3xl font-bold text-slate-900">Staff management</h1>
           </div>
         </div>
+
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-slate-900">Role page access</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Choose which pages each role can open. New roles can access every page except Staff until customized.
+              Admins always have access to every page.
+            </p>
+          </div>
+
+          {permissionsLoading ? (
+            <p className="text-sm text-slate-600">Loading role permissions...</p>
+          ) : rolePermissions.length === 0 ? (
+            <p className="text-sm text-slate-600">Add a non-admin staff role to configure page access.</p>
+          ) : (
+            <>
+              <label className="mb-4 block max-w-sm text-sm text-slate-700">
+                <span className="mb-2 block">Staff role</span>
+                <select
+                  value={selectedPermissionRole}
+                  onChange={(event) => setSelectedPermissionRole(event.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
+                >
+                  {rolePermissions.map((role) => (
+                    <option key={role.role_name} value={role.role_name}>
+                      {role.role_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {permissionPages.map((page) => (
+                  <label
+                    key={page.path}
+                    className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedRolePermissions?.accessible_pages.includes(page.path) ?? false}
+                      onChange={(event) => togglePagePermission(page.path, event.target.checked)}
+                      className="h-4 w-4 accent-cyan-600"
+                    />
+                    {page.label}
+                  </label>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={saveRolePermissions}
+                  disabled={permissionsSaving || !selectedRolePermissions}
+                  className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {permissionsSaving ? "Saving..." : "Save page access"}
+                </button>
+                {permissionsMessage && (
+                  <p role="status" className="text-sm text-cyan-700">{permissionsMessage}</p>
+                )}
+              </div>
+            </>
+          )}
+          {permissionsMessage && rolePermissions.length === 0 && (
+            <p role="alert" className="mt-3 text-sm text-rose-700">{permissionsMessage}</p>
+          )}
+        </section>
 
         <form onSubmit={handleSubmit} className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -196,17 +349,12 @@ export default function StaffPage() {
 
             <label className="text-sm text-slate-700">
               <span className="mb-2 block">Role</span>
-              <select
+              <input
                 value={form.role}
                 onChange={(event) => handleChange("role", event.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
-              >
-                <option value="Manager">Manager</option>
-                <option value="Warehouse Lead">Warehouse Lead</option>
-                <option value="Sales Agent">Sales Agent</option>
-                <option value="Driver">Driver</option>
-                <option value="Staff">Staff</option>
-              </select>
+                placeholder="Enter role"
+              />
             </label>
           </div>
 

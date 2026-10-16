@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { getSessionFromRequest } from "@/lib/session";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "http://localhost:3001",
@@ -18,6 +19,7 @@ export async function GET() {
       orderBy: [{ order_date: "desc" }, { order_id: "desc" }],
       include: {
         salesperson: true,
+        customer: true,
         sourceVehicle: true,
         sourceWarehouse: true,
         details: {
@@ -41,6 +43,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401, headers: corsHeaders },
+    );
+  }
+
   try {
     const body = await request.json();
     const rawItems = Array.isArray(body.items)
@@ -49,8 +59,11 @@ export async function POST(request: Request) {
         ? body.products
         : [];
 
-    const customerName = typeof body.customer_name === "string" ? body.customer_name.trim() : "";
-    const salespersonId = Number(body.salesperson_id);
+    const customerId = body.customer_id === undefined || body.customer_id === null || body.customer_id === ""
+      ? null
+      : Number(body.customer_id);
+    const legacyCustomerName = typeof body.customer_name === "string" ? body.customer_name.trim() : "";
+    const salespersonId = session.staffId;
     const sourceVehicleId = body.source_vehicle_id === undefined || body.source_vehicle_id === null || body.source_vehicle_id === ""
       ? null
       : Number(body.source_vehicle_id);
@@ -59,16 +72,26 @@ export async function POST(request: Request) {
       : Number(body.source_warehouse_id);
     const isPaid = body.is_paid === undefined ? true : body.is_paid;
 
-    if (!customerName) {
+    if (customerId !== null && (!Number.isInteger(customerId) || customerId <= 0)) {
       return NextResponse.json(
-        { error: "customer_name is required" },
+        { error: "Valid customer_id is required" },
         { status: 400, headers: corsHeaders },
       );
     }
 
-    if (!Number.isInteger(salespersonId) || salespersonId <= 0) {
+    const customer = customerId === null
+      ? null
+      : await prisma.customer.findUnique({ where: { customer_id: customerId } });
+    if (customerId !== null && !customer) {
       return NextResponse.json(
-        { error: "Valid salesperson_id is required" },
+        { error: "Customer not found" },
+        { status: 404, headers: corsHeaders },
+      );
+    }
+    const customerName = customer?.customer_name ?? legacyCustomerName;
+    if (!customerName) {
+      return NextResponse.json(
+        { error: "customer_id is required" },
         { status: 400, headers: corsHeaders },
       );
     }
@@ -133,6 +156,7 @@ export async function POST(request: Request) {
       const createdOrder = await tx.salesOrder.create({
         data: {
           customer_name: customerName,
+          customer_id: customer?.customer_id ?? null,
           salesperson_id: salespersonId,
           source_vehicle_id: sourceVehicleId,
           source_warehouse_id: sourceWarehouseId,

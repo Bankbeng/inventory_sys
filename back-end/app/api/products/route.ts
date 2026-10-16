@@ -30,19 +30,31 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { product_name, category, cost_price, retail_price } = body;
+    const { product_name, category, type, size, unit, cost_price, retail_price } = body;
 
-    if (!product_name || !category || cost_price === undefined || retail_price === undefined) {
+    if (
+      typeof product_name !== "string" ||
+      !product_name.trim() ||
+      typeof category !== "string" ||
+      !category.trim() ||
+      typeof unit !== "string" ||
+      !unit.trim() ||
+      cost_price === undefined ||
+      retail_price === undefined
+    ) {
       return NextResponse.json(
-        { error: "product_name, category, cost_price and retail_price are required" },
+        { error: "product_name, category, unit, cost_price and retail_price are required" },
         { status: 400, headers: corsHeaders },
       );
     }
 
     const product = await prisma.product.create({
       data: {
-        product_name: String(product_name),
-        category: String(category),
+        product_name: product_name.trim(),
+        category: category.trim(),
+        type: typeof type === "string" ? type.trim() : "",
+        size: typeof size === "string" ? size.trim() : "",
+        unit: unit.trim(),
         cost_price: Number(cost_price),
         retail_price: Number(retail_price),
       },
