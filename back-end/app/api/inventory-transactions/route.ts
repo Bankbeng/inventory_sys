@@ -28,7 +28,7 @@ export async function GET() {
     });
 
     return NextResponse.json(transactions, { headers: corsHeaders });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch inventory transactions" },
       { status: 500, headers: corsHeaders },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 
 type Vehicle = {
@@ -24,7 +24,7 @@ export default function VehiclesPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function loadVehicles() {
+  const loadVehicles = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/vehicles`);
       const data = await response.json();
@@ -35,11 +35,11 @@ export default function VehiclesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadVehicles();
-  }, []);
+    void Promise.resolve().then(loadVehicles);
+  }, [loadVehicles]);
 
   const resetForm = () => {
     setForm(emptyForm);

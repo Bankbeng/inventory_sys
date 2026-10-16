@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 
 type TransactionDetail = {
@@ -40,7 +40,7 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>("all");
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       const [transactionResponse, productResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/api/inventory-transactions`),
@@ -59,11 +59,11 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void Promise.resolve().then(loadData);
+  }, [loadData]);
 
   const filteredTransactions =
     filterType === "all"

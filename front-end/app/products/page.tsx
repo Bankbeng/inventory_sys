@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
 
@@ -43,7 +43,7 @@ export default function ProductsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function loadProducts() {
+  const loadProducts = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/products`);
       const data = await response.json();
@@ -54,11 +54,11 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    void Promise.resolve().then(loadProducts);
+  }, [loadProducts]);
 
   const handleChange = (field: keyof ProductFormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));

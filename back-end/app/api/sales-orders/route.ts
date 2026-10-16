@@ -34,7 +34,7 @@ export async function GET() {
     });
 
     return NextResponse.json(orders, { headers: corsHeaders });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch sales orders" },
       { status: 500, headers: corsHeaders },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 
 type Product = {
@@ -71,7 +71,7 @@ export default function StockPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [form, setForm] = useState<MovementForm>(initialForm);
 
-  async function loadStockData() {
+  const loadStockData = useCallback(async () => {
     try {
       const [productResponse, warehouseListResponse, vehicleListResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/api/products`),
@@ -103,11 +103,11 @@ export default function StockPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadStockData();
-  }, []);
+    void Promise.resolve().then(loadStockData);
+  }, [loadStockData]);
 
   const sourceOptions: Array<Warehouse | Vehicle> = form.sourceLocationType === "warehouse" ? warehouses : vehicles;
   const destinationOptions: Array<Warehouse | Vehicle> = form.destinationLocationType === "warehouse" ? warehouses : vehicles;

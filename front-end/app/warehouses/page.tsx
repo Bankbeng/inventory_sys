@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 
 type Warehouse = {
@@ -24,7 +24,7 @@ export default function WarehousesPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function loadWarehouses() {
+  const loadWarehouses = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/warehouses`);
       const data = await response.json();
@@ -35,11 +35,11 @@ export default function WarehousesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadWarehouses();
-  }, []);
+    void Promise.resolve().then(loadWarehouses);
+  }, [loadWarehouses]);
 
   const resetForm = () => {
     setForm(emptyForm);

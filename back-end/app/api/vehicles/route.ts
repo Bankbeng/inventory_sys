@@ -19,7 +19,7 @@ export async function GET() {
     });
 
     return NextResponse.json(vehicles, { headers: corsHeaders });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch vehicles" },
       { status: 500, headers: corsHeaders },
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(vehicle, { status: 201, headers: corsHeaders });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to create vehicle" },
       { status: 500, headers: corsHeaders },

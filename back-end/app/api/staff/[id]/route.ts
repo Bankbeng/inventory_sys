@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { withoutPassword } from "@/lib/staff";
+import { requireStaffApiAccess } from "@/lib/staff-api-auth";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "http://localhost:3001",
@@ -25,10 +26,15 @@ export async function OPTIONS() {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request);
+    if (accessError) {
+      return accessError;
+    }
+
     const { id } = await params;
     const staff = await prisma.staff.findUnique({
       where: { staff_id: parseId(id) },
@@ -52,6 +58,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request, true);
+    if (accessError) {
+      return accessError;
+    }
+
     const { id } = await params;
     const body = await request.json();
     const staff = await prisma.staff.update({
@@ -80,10 +91,15 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request, true);
+    if (accessError) {
+      return accessError;
+    }
+
     const { id } = await params;
     await prisma.staff.delete({
       where: { staff_id: parseId(id) },

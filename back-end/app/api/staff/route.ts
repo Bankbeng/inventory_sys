@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { withoutPassword } from "@/lib/staff";
+import { requireStaffApiAccess } from "@/lib/staff-api-auth";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "http://localhost:3001",
@@ -14,8 +15,13 @@ export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const accessError = await requireStaffApiAccess(request);
+    if (accessError) {
+      return accessError;
+    }
+
     const staff = await prisma.staff.findMany({
       orderBy: { staff_id: "asc" },
     });
@@ -31,6 +37,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const accessError = await requireStaffApiAccess(request, true);
+    if (accessError) {
+      return accessError;
+    }
+
     const body = await request.json();
     const { staff_name, username, password, role } = body;
 

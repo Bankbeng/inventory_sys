@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
 import BrandMark from "../components/BrandMark";
@@ -114,7 +114,7 @@ export default function SalesPage() {
   const [invoiceOrder, setInvoiceOrder] = useState<SalesOrder | null>(null);
   const [form, setForm] = useState<SaleForm>(initialForm);
 
-  async function loadSalesData() {
+  const loadSalesData = useCallback(async () => {
     try {
       const [salesResponse, productResponse, warehouseResponse, vehicleResponse, customerResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/api/sales-orders`),
@@ -157,8 +157,12 @@ export default function SalesPage() {
         }));
       }
 
-      if (!form.sourceId && nextWarehouses[0]) {
-        setForm((current) => ({ ...current, sourceId: String(nextWarehouses[0].warehouse_id) }));
+      if (nextWarehouses[0]) {
+        setForm((current) =>
+          current.sourceId
+            ? current
+            : { ...current, sourceId: String(nextWarehouses[0].warehouse_id) },
+        );
       }
     } catch (error) {
       console.error("Failed to load sales data", error);
@@ -166,11 +170,11 @@ export default function SalesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void Promise.resolve().then(loadSalesData);
-  }, []);
+  }, [loadSalesData]);
 
   const sourceOptions = form.sourceType === "warehouse" ? warehouses : vehicles;
 

@@ -1,12 +1,16 @@
-require("dotenv/config");
-const { PrismaClient } = require("@prisma/client");
-const { PrismaMariaDb } = require("@prisma/adapter-mariadb");
+import "dotenv/config";
+import { PrismaClient } from "@prisma/client";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
 const prisma = new PrismaClient({
   adapter: new PrismaMariaDb(process.env.DATABASE_URL),
 });
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Refusing to insert demo seed data in production");
+  }
+
   await prisma.staff.createMany({
     data: [
       {
@@ -76,7 +80,7 @@ async function main() {
 main()
   .catch((error) => {
     console.error("Seed failed:", error);
-    process.exit(1);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();

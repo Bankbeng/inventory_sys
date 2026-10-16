@@ -13,7 +13,7 @@ export async function GET() {
     });
 
     return NextResponse.json(stocks);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch vehicle stock" },
       { status: 500 },
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(stock, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to create vehicle stock record" },
       { status: 500 },
