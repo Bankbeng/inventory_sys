@@ -27,6 +27,7 @@ export async function GET(request: Request) {
       allowed,
       role: staff.role,
       isAdmin: staff.role.trim().toLocaleLowerCase() === "admin",
+      staff_name: staff.staff_name,
       allowed_pages: allowedPages,
     });
   } catch (error) {

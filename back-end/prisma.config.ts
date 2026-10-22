@@ -9,7 +9,14 @@ if (!databaseUrl) {
 }
 
 const migrationDatabaseUrl = new URL(databaseUrl);
-migrationDatabaseUrl.searchParams.set("sslaccept", "strict");
+const databaseHost = migrationDatabaseUrl.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+const isLocalDatabase = ["localhost", "127.0.0.1", "::1"].includes(databaseHost);
+
+if (isLocalDatabase) {
+  migrationDatabaseUrl.searchParams.delete("sslaccept");
+} else {
+  migrationDatabaseUrl.searchParams.set("sslaccept", "strict");
+}
 
 export default defineConfig({
   schema: "prisma/schema.prisma",

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
+import SearchableSelect from "../components/SearchableSelect";
 
 type Product = {
   product_id: number;
@@ -111,6 +112,14 @@ export default function StockPage() {
 
   const sourceOptions: Array<Warehouse | Vehicle> = form.sourceLocationType === "warehouse" ? warehouses : vehicles;
   const destinationOptions: Array<Warehouse | Vehicle> = form.destinationLocationType === "warehouse" ? warehouses : vehicles;
+  const productOptions = useMemo(
+    () =>
+      products.map((product) => ({
+        value: String(product.product_id),
+        label: getProductLabel(product),
+      })),
+    [products],
+  );
 
   const addItemRow = () => {
     setForm((current) => ({
@@ -271,28 +280,28 @@ export default function StockPage() {
 
             {(form.movementType === "out" || form.movementType === "transfer") && (
               <label className="text-sm text-slate-700">
-                <span className="mb-2 block">Source type</span>
+                <span className="mb-2 block">ປະເພດສາງຕົ້ນທາງ</span>
                 <select
                   value={form.sourceLocationType}
                   onChange={(event) => setForm((current) => ({ ...current, sourceLocationType: event.target.value as MovementForm["sourceLocationType"], sourceId: "" }))}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 >
-                  <option value="warehouse">Warehouse</option>
-                  <option value="vehicle">Vehicle</option>
+                  <option value="warehouse">ສາງ</option>
+                  <option value="vehicle">ລົດ</option>
                 </select>
               </label>
             )}
 
             {(form.movementType === "in" || form.movementType === "transfer") && (
               <label className="text-sm text-slate-700">
-                <span className="mb-2 block">Destination type</span>
+                <span className="mb-2 block">ປະເພດສາງປາຍທາງ</span>
                 <select
                   value={form.destinationLocationType}
                   onChange={(event) => setForm((current) => ({ ...current, destinationLocationType: event.target.value as MovementForm["destinationLocationType"], destinationId: "" }))}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 >
-                  <option value="warehouse">Warehouse</option>
-                  <option value="vehicle">Vehicle</option>
+                  <option value="warehouse">ສາງ</option>
+                  <option value="vehicle">ລົດ</option>
                 </select>
               </label>
             )}
@@ -314,17 +323,13 @@ export default function StockPage() {
                 {form.items.map((item, index) => (
                   <div key={`item-${index}`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.5fr_0.7fr_auto]">
                     <label className="text-sm text-slate-700">
-                      <span className="mb-2 block">Product</span>
-                      <select
+                      <SearchableSelect
+                        label="Product"
+                        options={productOptions}
                         value={item.productId}
-                        onChange={(event) => updateItemRow(index, "productId", event.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
-                      >
-                        <option value="">Select product</option>
-                        {products.map((product) => (
-                          <option key={product.product_id} value={product.product_id}>{getProductLabel(product)}</option>
-                        ))}
-                      </select>
+                        onChange={(productId) => updateItemRow(index, "productId", productId)}
+                        placeholder="Search product name"
+                      />
                     </label>
 
                     <label className="text-sm text-slate-700">
@@ -362,7 +367,7 @@ export default function StockPage() {
                   onChange={(event) => setForm((current) => ({ ...current, sourceId: event.target.value }))}
                   className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
                 >
-                  <option value="">Select source</option>
+                  <option value="">ຕົ້ນທາງ</option>
                   {sourceOptions.map((item) => {
                     if (form.sourceLocationType === "warehouse") {
                       const warehouse = item as Warehouse;
@@ -392,7 +397,7 @@ export default function StockPage() {
                   onChange={(event) => setForm((current) => ({ ...current, destinationId: event.target.value }))}
                   className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-cyan-400"
                 >
-                  <option value="">Select destination</option>
+                  <option value="">ປາຍທາງ</option>
                   {destinationOptions.map((item) => {
                     if (form.destinationLocationType === "warehouse") {
                       const warehouse = item as Warehouse;

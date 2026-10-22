@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
 
@@ -42,6 +42,7 @@ export default function ProductsPage() {
   const [form, setForm] = useState<ProductFormState>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const loadProducts = useCallback(async () => {
     try {
@@ -59,6 +60,25 @@ export default function ProductsPage() {
   useEffect(() => {
     void Promise.resolve().then(loadProducts);
   }, [loadProducts]);
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase();
+    if (!query) return products;
+
+    return products.filter((product) =>
+      [
+        product.product_name,
+        product.category,
+        product.type,
+        product.size,
+        product.unit,
+        String(product.product_id),
+      ]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(query),
+    );
+  }, [products, searchQuery]);
 
   const handleChange = (field: keyof ProductFormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -288,8 +308,34 @@ export default function ProductsPage() {
             Loading products...
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {products.map((product) => (
+          <>
+            {products.length > 0 && (
+              <div className="mb-4">
+                <label htmlFor="product-search" className="sr-only">Search products</label>
+                <input
+                  id="product-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search by product name, category, type, size, or ID"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
+                />
+                <p className="mt-2 text-sm text-slate-500" aria-live="polite">
+                  Showing {filteredProducts.length} of {products.length} products
+                </p>
+              </div>
+            )}
+            {products.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">
+                No products added yet.
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">
+                No products match your search.
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {filteredProducts.map((product) => (
               <article key={product.product_id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
@@ -322,7 +368,9 @@ export default function ProductsPage() {
                 </div>
               </article>
             ))}
-          </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>

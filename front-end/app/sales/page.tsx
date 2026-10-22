@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
+import { formatDate } from "@/lib/date";
 import BrandMark from "../components/BrandMark";
+import SearchableSelect from "../components/SearchableSelect";
 
 type Product = {
   product_id: number;
@@ -94,12 +96,7 @@ function getInvoiceNumber(order: Pick<SalesOrder, "order_id" | "order_date">) {
 function getDueDate(orderDate: string) {
   const dueDate = new Date(orderDate);
   dueDate.setDate(dueDate.getDate() + 30);
-  return dueDate.toLocaleDateString();
-}
-
-function getSizeInLiters(size?: string) {
-  const match = size?.trim().match(/^(\d+(?:[.,]\d+)?)\s*(?:l|lt|ltr|liter|liters)$/i);
-  return match ? Number(match[1].replace(",", ".")) : null;
+  return formatDate(dueDate);
 }
 
 export default function SalesPage() {
@@ -177,6 +174,23 @@ export default function SalesPage() {
   }, [loadSalesData]);
 
   const sourceOptions = form.sourceType === "warehouse" ? warehouses : vehicles;
+  const customerOptions = useMemo(
+    () =>
+      customers.map((customer) => ({
+        value: String(customer.customer_id),
+        label: customer.customer_name,
+        searchText: customer.phone_number ?? "",
+      })),
+    [customers],
+  );
+  const productOptions = useMemo(
+    () =>
+      products.map((product) => ({
+        value: String(product.product_id),
+        label: getProductLabel(product),
+      })),
+    [products],
+  );
 
   const totalValue = useMemo(
     () =>
@@ -194,14 +208,6 @@ export default function SalesPage() {
     0,
   );
   const invoiceQuantity = invoiceDetails.reduce((sum, detail) => sum + Number(detail.quantity_sold), 0);
-  const detailLiters = invoiceDetails.map((detail) => {
-    const sizeInLiters = getSizeInLiters(detail.product?.size);
-    return sizeInLiters === null ? null : sizeInLiters * Number(detail.quantity_sold);
-  });
-  const invoiceLiters =
-    detailLiters.length > 0 && detailLiters.every((liters) => liters !== null)
-      ? detailLiters.reduce<number>((sum, liters) => sum + (liters ?? 0), 0)
-      : null;
 
   const addLine = () => {
     const nextProduct = products[0];
@@ -311,7 +317,6 @@ export default function SalesPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-cyan-600">Revenue</p>
             <h1 className="mt-2 text-3xl font-bold text-slate-900">Sales orders</h1>
           </div>
         </div>
@@ -319,20 +324,13 @@ export default function SalesPage() {
         <form onSubmit={handleSubmit} className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="grid gap-4 md:grid-cols-4">
             <label className="text-sm text-slate-700 md:col-span-2">
-              <span className="mb-2 block">Customer</span>
-              <select
-                required
+              <SearchableSelect
+                label="ລູກຄ້າ"
+                options={customerOptions}
                 value={form.customerId}
-                onChange={(event) => setForm((current) => ({ ...current, customerId: event.target.value }))}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
-              >
-                <option value="">Select customer</option>
-                {customers.map((customer) => (
-                  <option key={customer.customer_id} value={customer.customer_id}>
-                    {customer.customer_name}
-                  </option>
-                ))}
-              </select>
+                onChange={(customerId) => setForm((current) => ({ ...current, customerId }))}
+                placeholder="ຄົ້ນຫາລູກຄ້າຕາມຊື່ ຫຼື ເບີໂທ"
+              />
               {customers.length === 0 && (
                 <span className="mt-1 block text-xs text-slate-500">
                   No customers yet. <a href="/customers" className="text-cyan-700 underline">Add a customer</a>.
@@ -341,7 +339,7 @@ export default function SalesPage() {
             </label>
 
             <label className="text-sm text-slate-700">
-              <span className="mb-2 block">Payment status</span>
+              <span className="mb-2 block">ການຊຳລະ</span>
               <select
                 value={form.paymentStatus}
                 onChange={(event) => setForm((current) => ({
@@ -350,13 +348,13 @@ export default function SalesPage() {
                 }))}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
               >
-                <option value="paid">Paid</option>
-                <option value="unpaid">Unpaid (add to receivables)</option>
+                <option value="paid">ຈ່າຍແລ້ວ</option>
+                <option value="unpaid">ຕິດໜີ້</option>
               </select>
             </label>
 
             <label className="text-sm text-slate-700">
-              <span className="mb-2 block">Source type</span>
+              <span className="mb-2 block">ປະເພດສາງທີ່ຂາຍອອກ</span>
               <select
                 value={form.sourceType}
                 onChange={(event) => {
@@ -374,8 +372,8 @@ export default function SalesPage() {
                 }}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
               >
-                <option value="warehouse">Warehouse</option>
-                <option value="vehicle">Vehicle</option>
+                <option value="warehouse">ສາງ</option>
+                <option value="vehicle">ລົດ</option>
               </select>
             </label>
 
@@ -403,11 +401,11 @@ export default function SalesPage() {
             {form.lines.map((line, index) => (
               <div key={index} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.5fr_0.8fr_0.9fr_auto]">
                 <label className="text-sm text-slate-700">
-                  <span className="mb-2 block">Product</span>
-                  <select
+                  <SearchableSelect
+                    label="Product"
+                    options={productOptions}
                     value={line.productId}
-                    onChange={(event) => {
-                      const productId = event.target.value;
+                    onChange={(productId) => {
                       const selectedProduct = products.find(
                         (product) => String(product.product_id) === productId,
                       );
@@ -425,15 +423,8 @@ export default function SalesPage() {
                         ),
                       }));
                     }}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
-                  >
-                    <option value="">Select product</option>
-                    {products.map((product) => (
-                      <option key={product.product_id} value={product.product_id}>
-                        {getProductLabel(product)}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Search product name"
+                  />
                 </label>
 
                 <label className="text-sm text-slate-700">
@@ -537,7 +528,7 @@ export default function SalesPage() {
                         <td className="px-4 py-3 text-slate-600">{sourceName}</td>
                         <td className="px-4 py-3 text-slate-600">{itemSummary}</td>
                         <td className="px-4 py-3 text-cyan-700">{formatCurrency(Number(item.total_amount || 0))}</td>
-                        <td className="px-4 py-3 text-slate-600">{new Date(item.order_date).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-slate-600">{formatDate(item.order_date)}</td>
                         <td className="px-4 py-3">
                           <span className={item.is_paid
                             ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700"
@@ -600,7 +591,11 @@ export default function SalesPage() {
               <header className="invoice-header">
                 <div className="invoice-company">
                   <BrandMark />
-                  <strong>LAO SOLE CO., LTD.</strong>
+                  <strong>DVK LAO SOLE COMPANY LIMITED</strong>
+                  <p>Sales Automotive Division (Engine Oil &amp; Spare Parts)</p>
+                  <p>Thadeua Rd, Nahai Village, Hatxayfong District, Vientiane Capital Lao P.D.R</p>
+                  <p>Tel: (+856 20) 51987895, 91556619</p>
+                  <p>Email: duangsavanhDVK@gmail.com</p>
                 </div>
                 <h1 id="invoice-title">Invoice</h1>
               </header>
@@ -610,7 +605,6 @@ export default function SalesPage() {
                   <h2>Bill to</h2>
                   <strong>{invoiceOrder.customer?.customer_name ?? invoiceOrder.customer_name ?? "Walk-in Customer"}</strong>
                   <p>Tel: {invoiceOrder.customer?.phone_number || "—"}</p>
-                  <p>Customer Tax ID: Not set</p>
                   {invoiceOrder.customer?.place_link && <p>Location: {invoiceOrder.customer.place_link}</p>}
                 </div>
                 <dl className="invoice-meta">
@@ -624,7 +618,7 @@ export default function SalesPage() {
                   </div>
                   <div>
                     <dt>Date</dt>
-                    <dd>{new Date(invoiceOrder.order_date).toLocaleDateString()}</dd>
+                    <dd>{formatDate(invoiceOrder.order_date)}</dd>
                   </div>
                   <div>
                     <dt>Credit term</dt>
@@ -650,42 +644,34 @@ export default function SalesPage() {
                   <thead>
                     <tr>
                       <th>No.</th>
-                      <th>Product code</th>
                       <th>Product description</th>
                       <th>Type</th>
                       <th>Size</th>
                       <th>QTY</th>
                       <th>Unit</th>
-                      <th>Total liters</th>
                       <th>Unit price</th>
                       <th>Amount</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {invoiceDetails.map((detail, index) => {
-                      const liters = detailLiters[index];
-                      return (
+                    {invoiceDetails.map((detail, index) => (
                         <tr key={`${invoiceOrder.order_id}-${detail.product_id}`}>
                           <td>{index + 1}</td>
-                          <td>{detail.product?.product_id ?? detail.product_id}</td>
                           <td>{detail.product?.product_name ?? `Product ${detail.product_id}`}</td>
                           <td>{detail.product?.type || "—"}</td>
                           <td>{detail.product?.size || "—"}</td>
                           <td>{detail.quantity_sold}</td>
                           <td>{detail.product?.unit || "—"}</td>
-                          <td>{liters === null ? "—" : liters.toLocaleString()}</td>
                           <td>{formatCurrency(Number(detail.sold_at_price))}</td>
                           <td>{formatCurrency(Number(detail.quantity_sold) * Number(detail.sold_at_price))}</td>
                         </tr>
-                      );
-                    })}
+                    ))}
                   </tbody>
                   <tfoot>
                     <tr>
-                      <th colSpan={5}>Total</th>
+                      <th colSpan={4}>Total</th>
                       <th>{invoiceQuantity}</th>
                       <th></th>
-                      <th>{invoiceLiters === null ? "—" : invoiceLiters.toLocaleString()}</th>
                       <th></th>
                       <th>{formatCurrency(invoiceSubtotal)}</th>
                     </tr>
@@ -700,6 +686,38 @@ export default function SalesPage() {
                     <dd>{formatCurrency(Number(invoiceOrder.total_amount || 0))}</dd>
                   </div>
                 </dl>
+              </div>
+
+              <section className="invoice-remarks" aria-label="Invoice remarks">
+                <h2>ໝາຍເຫດ</h2>
+                <ol>
+                  <li>ຈັດສົ່ງເຄື່ອງໃຫ້ພາຍໃນ 7-10 ວັນ</li>
+                  <li>
+                    ລູກຄ້າສາມາດຊຳລະເປັນເງິນສົດ, ແຊັກ ແລະ ເງິນໂອນກໍໄດ
+                    <ul>
+                      <li>
+                        ຊື່: ທະນາຄານພັດທະນາລາວ · ຊື່ບັນຊີ: DOUANGSAVANH KHAMPASERD MR ·
+                        ເລກບັນຊີ: 0300900410039654 KIP · ເລກບັນຊີ: 0300902410000954 THB
+                      </li>
+                      <li>
+                        ຊື່: ທະນາຄານການຄ້າຕ່າງປະເທດລາວ · ຊື່ບັນຊີ: MR. DOUNGSAVANH KHAMPASEUTH ·
+                        ເລກບັນຊີ: 010120000351222001 KIP · ເລກບັນຊີ: 093120200351222001 THB
+                      </li>
+                    </ul>
+                  </li>
+                  <li>ຖ້າໄດ້ຮັບເອກະສານ ບໍ່ຈະແຈ້ງ, ບໍ່ຊັດເຈນກະລຸນາແຈ້ງທີ່ເບີໂທ: 020 55119779; 020 22234428</li>
+                </ol>
+              </section>
+
+              <div className="invoice-signatures">
+                <div>
+                  <span>Customer signature</span>
+                  <div className="invoice-signature-line" />
+                </div>
+                <div>
+                  <span>Seller signature</span>
+                  <div className="invoice-signature-line" />
+                </div>
               </div>
 
               <p className="invoice-thanks">Thank you for your business.</p>

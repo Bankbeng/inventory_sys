@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
+import { formatDate, formatDateTime } from "@/lib/date";
 
 type Receivable = {
   order_id: number;
@@ -100,6 +101,8 @@ export default function AccountsReceivablePage() {
   const [reportGroupBy, setReportGroupBy] = useState<"salesperson" | "customer">("salesperson");
   const [reportEntity, setReportEntity] = useState("all");
   const [message, setMessage] = useState<string | null>(null);
+  const [printTimestamp, setPrintTimestamp] = useState<number | null>(null);
+  const [printRequestId, setPrintRequestId] = useState(0);
 
   useEffect(() => {
     async function loadReceivables() {
@@ -127,6 +130,12 @@ export default function AccountsReceivablePage() {
 
     void loadReceivables();
   }, []);
+
+  useEffect(() => {
+    if (printRequestId > 0) {
+      window.print();
+    }
+  }, [printRequestId]);
 
   const outstandingTotal = useMemo(
     () => orders.reduce((sum, order) => sum + getOutstanding(order), 0),
@@ -246,7 +255,10 @@ export default function AccountsReceivablePage() {
               </select>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => {
+                  setPrintTimestamp(Date.now());
+                  setPrintRequestId((current) => current + 1);
+                }}
                 disabled={loading || visibleReportGroups.length === 0}
                 className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -261,7 +273,7 @@ export default function AccountsReceivablePage() {
               <p className="mt-1 text-sm">
                 Grouped by {reportGroupBy === "salesperson" ? "salesperson" : "customer"} ·
                 {" "}{reportEntity === "all" ? "All" : reportEntity} ·
-                {" "}Printed {new Date().toLocaleString()}
+                {" "}Printed {printTimestamp === null ? "—" : formatDateTime(printTimestamp)}
               </p>
               <p className="mt-2 text-sm">
                 {reportOrderCount} outstanding orders · {formatCurrency(reportTotal)} remaining
@@ -317,7 +329,7 @@ export default function AccountsReceivablePage() {
                               <h4 className="font-semibold text-slate-900">SO-{order.order_id} · {order.customer_name}</h4>
                               <p className="mt-1 text-xs text-slate-600">
                                 Salesperson: {order.salesperson?.staff_name ?? "Unknown"} ·
-                                {" "}Order date: {new Date(order.order_date).toLocaleDateString()} ·
+                                {" "}Order date: {formatDate(order.order_date)} ·
                                 {" "}{getDebtDays(order)} {getDebtDays(order) === 1 ? "day" : "days"} outstanding
                               </p>
                             </div>
@@ -359,7 +371,7 @@ export default function AccountsReceivablePage() {
                                   {order.payments.map((payment) => (
                                     <li key={payment.payment_id} className="flex justify-between gap-3">
                                       <span>
-                                        {new Date(payment.paid_at).toLocaleDateString()}
+                                        {formatDate(payment.paid_at)}
                                         {payment.note ? ` · ${payment.note}` : ""}
                                       </span>
                                       <span className="shrink-0 font-medium">{formatCurrency(Number(payment.amount))}</span>
@@ -436,7 +448,7 @@ export default function AccountsReceivablePage() {
                       <td className="px-4 py-3 font-medium text-slate-900">SO-{order.order_id}</td>
                       <td className="px-4 py-3 text-slate-600">{order.customer_name}</td>
                       <td className="px-4 py-3 text-slate-600">{order.salesperson?.staff_name ?? "Unknown"}</td>
-                      <td className="px-4 py-3 text-slate-600">{new Date(order.order_date).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-slate-600">{formatDate(order.order_date)}</td>
                       <td className="px-4 py-3 font-medium text-slate-700">
                         {getDebtDays(order)} {getDebtDays(order) === 1 ? "day" : "days"}
                         {getOutstanding(order) <= 0.000001 && (
@@ -451,7 +463,7 @@ export default function AccountsReceivablePage() {
                           <ul className="mt-1 space-y-1 text-xs">
                             {order.payments.map((payment) => (
                               <li key={payment.payment_id}>
-                                {formatCurrency(Number(payment.amount))} · {new Date(payment.paid_at).toLocaleString()}
+                                {formatCurrency(Number(payment.amount))} · {formatDateTime(payment.paid_at)}
                                 {payment.note ? ` · ${payment.note}` : ""}
                               </li>
                             ))}

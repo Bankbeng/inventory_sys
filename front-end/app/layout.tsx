@@ -26,7 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-white text-slate-900">
         <TopNav />
-        <div className="pt-20">{children}</div>
+        <div id="app-content" className="pt-20">{children}</div>
       </body>
     </html>
   );

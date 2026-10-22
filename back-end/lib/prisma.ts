@@ -7,6 +7,8 @@ if (!databaseUrl) {
 }
 
 const databaseConnection = new URL(databaseUrl);
+const databaseHost = databaseConnection.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+const isLocalDatabase = ["localhost", "127.0.0.1", "::1"].includes(databaseHost);
 const databaseName = decodeURIComponent(databaseConnection.pathname.slice(1));
 if (!databaseConnection.hostname || !databaseConnection.username || !databaseName) {
   throw new Error("DATABASE_URL must include a host, username, and database name");
@@ -18,7 +20,7 @@ const adapter = new PrismaMariaDb({
   user: decodeURIComponent(databaseConnection.username),
   password: decodeURIComponent(databaseConnection.password),
   database: databaseName,
-  ssl: { rejectUnauthorized: true },
+  ssl: isLocalDatabase ? undefined : { rejectUnauthorized: true },
 });
 
 const globalForPrisma = globalThis as typeof globalThis & {

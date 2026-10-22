@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
+import { formatDateTime as formatDateTimeValue } from "@/lib/date";
 
 type TransactionDetail = {
   transaction_id: number;
@@ -128,19 +129,7 @@ export default function TransactionsPage() {
   };
 
   const formatDateTime = (dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-    } catch {
-      return dateString;
-    }
+    return formatDateTimeValue(dateString, true);
   };
 
   const getTransactionBadgeColor = (type: string): string => {

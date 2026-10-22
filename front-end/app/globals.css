@@ -109,6 +109,12 @@ body {
   letter-spacing: 0.04em;
 }
 
+.invoice-company p {
+  margin: 0;
+  font-size: 0.65rem;
+  line-height: 1.35;
+}
+
 .invoice-header h1 {
   text-align: center;
   font-size: 1.75rem;
@@ -222,6 +228,56 @@ body {
   font-weight: 700;
 }
 
+.invoice-signatures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin: 3rem 0.25rem 0;
+  break-inside: avoid;
+}
+
+.invoice-signatures > div {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.invoice-signature-line {
+  height: 4rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #0f172a;
+}
+
+.invoice-remarks {
+  margin-top: 1.5rem;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  break-inside: avoid;
+}
+
+.invoice-remarks h2 {
+  margin-bottom: 0.35rem;
+  font-weight: 700;
+}
+
+.invoice-remarks ol,
+.invoice-remarks ul {
+  padding-left: 1.25rem;
+}
+
+.invoice-remarks ol {
+  list-style: decimal;
+}
+
+.invoice-remarks ul {
+  margin-top: 0.2rem;
+  list-style: disc;
+}
+
+.invoice-remarks li + li {
+  margin-top: 0.15rem;
+}
+
 .invoice-thanks {
   margin-top: 2rem;
   border-top: 1px dashed #94a3b8;
@@ -240,18 +296,27 @@ body {
     background: white !important;
   }
 
-  body * {
-    visibility: hidden !important;
+  body > *:not(#app-content) {
+    display: none !important;
   }
 
-  .invoice-overlay,
-  .invoice-overlay * {
-    visibility: visible !important;
+  #app-content {
+    display: block !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+
+  #app-content > main {
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+
+  #app-content > main > *:not(.invoice-overlay) {
+    display: none !important;
   }
 
   .invoice-overlay {
-    position: fixed;
-    inset: 0;
+    position: static;
     display: block;
     overflow: visible;
     padding: 0;
@@ -264,6 +329,7 @@ body {
 
   .invoice-dialog,
   .invoice-paper {
+    position: static;
     width: 100%;
     max-width: none;
     margin: 0;
@@ -273,6 +339,28 @@ body {
 
   .invoice-paper {
     padding: 0;
+  }
+
+  .invoice-header {
+    padding-bottom: 0.4rem;
+  }
+
+  .invoice-company {
+    gap: 0.15rem;
+  }
+
+  .invoice-company p {
+    font-size: 6pt;
+    line-height: 1.15;
+  }
+
+  .invoice-order-details {
+    gap: 0.75rem;
+    margin-top: 0.6rem;
+  }
+
+  .invoice-items {
+    margin-top: 0.6rem;
   }
 
   .invoice-items-wrap {
@@ -288,7 +376,46 @@ body {
   .invoice-items th,
   .invoice-items td {
     overflow-wrap: anywhere;
-    padding: 3pt 1pt;
+    padding: 2pt 1pt;
+  }
+
+  .invoice-summary {
+    margin-top: 0.4rem;
+  }
+
+  .invoice-remarks {
+    margin-top: 0.5rem;
+    font-size: 6pt;
+    line-height: 1.2;
+  }
+
+  .invoice-remarks ol,
+  .invoice-remarks ul {
+    padding-left: 0.9rem;
+  }
+
+  .invoice-remarks ul,
+  .invoice-remarks li + li {
+    margin-top: 0.05rem;
+  }
+
+  .invoice-signatures {
+    gap: 1rem;
+    margin: 1rem 0.25rem 0;
+  }
+
+  .invoice-signatures > div {
+    font-size: 7pt;
+  }
+
+  .invoice-signature-line {
+    height: 2.5rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .invoice-thanks {
+    margin-top: 0.5rem;
+    padding-top: 0.35rem;
   }
 
   .invoice-items th:nth-child(1) {
@@ -296,39 +423,31 @@ body {
   }
 
   .invoice-items th:nth-child(2) {
-    width: 9%;
+    width: 28%;
   }
 
   .invoice-items th:nth-child(3) {
-    width: 23%;
+    width: 14%;
   }
 
   .invoice-items th:nth-child(4) {
-    width: 8%;
+    width: 9%;
   }
 
   .invoice-items th:nth-child(5) {
-    width: 7%;
+    width: 6%;
   }
 
   .invoice-items th:nth-child(6) {
-    width: 5%;
-  }
-
-  .invoice-items th:nth-child(7) {
     width: 7%;
   }
 
+  .invoice-items th:nth-child(7) {
+    width: 14%;
+  }
+
   .invoice-items th:nth-child(8) {
-    width: 8%;
-  }
-
-  .invoice-items th:nth-child(9) {
-    width: 12%;
-  }
-
-  .invoice-items th:nth-child(10) {
-    width: 15%;
+    width: 18%;
   }
 }
 

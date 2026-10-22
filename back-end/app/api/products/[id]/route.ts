@@ -95,6 +95,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Product not found" }, { status: 404, headers: corsHeaders });
     }
 
+    if (error && typeof error === "object" && "code" in error && error.code === "P2003") {
+      return NextResponse.json(
+        { error: "This product cannot be deleted because it is referenced by stock records, sales, or inventory transactions. Update the product details instead." },
+        { status: 409, headers: corsHeaders },
+      );
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to delete product" },
       { status: 400, headers: corsHeaders },
