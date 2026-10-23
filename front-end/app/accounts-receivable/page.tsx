@@ -27,6 +27,7 @@ type Receivable = {
     amount: number;
     paid_at: string;
     note: string | null;
+    recordedBy?: { staff_name: string } | null;
   }[];
 };
 
@@ -373,6 +374,7 @@ export default function AccountsReceivablePage() {
                                       <span>
                                         {formatDate(payment.paid_at)}
                                         {payment.note ? ` · ${payment.note}` : ""}
+                                        {" "}· Recorded by {payment.recordedBy?.staff_name ?? "Unknown"}
                                       </span>
                                       <span className="shrink-0 font-medium">{formatCurrency(Number(payment.amount))}</span>
                                     </li>
@@ -465,6 +467,7 @@ export default function AccountsReceivablePage() {
                               <li key={payment.payment_id}>
                                 {formatCurrency(Number(payment.amount))} · {formatDateTime(payment.paid_at)}
                                 {payment.note ? ` · ${payment.note}` : ""}
+                                {" "}· Recorded by {payment.recordedBy?.staff_name ?? "Unknown"}
                               </li>
                             ))}
                           </ul>

@@ -18,6 +18,7 @@ model Staff {
 
   inventoryTransactions InventoryTransaction[]
   salesOrders           SalesOrder[]
+  recordedPayments      SalesOrderPayment[] @relation("paymentRecorder")
 
   @@map("STAFF")
 }
@@ -164,13 +165,16 @@ model SalesOrder {
 model SalesOrderPayment {
   payment_id Int      @id @default(autoincrement())
   order_id   Int
+  staff_id   Int?
   amount     Float
   paid_at    DateTime @default(now())
   note       String?
 
-  order SalesOrder @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
+  order      SalesOrder @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
+  recordedBy Staff?     @relation("paymentRecorder", fields: [staff_id], references: [staff_id], onDelete: SetNull)
 
   @@index([order_id, paid_at])
+  @@index([staff_id])
   @@map("SALES_ORDER_PAYMENT")
 }
 

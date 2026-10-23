@@ -29,6 +29,11 @@ export async function GET() {
         },
         payments: {
           orderBy: { paid_at: "asc" },
+          include: {
+            recordedBy: {
+              select: { staff_name: true },
+            },
+          },
         },
       },
     });
@@ -169,6 +174,7 @@ export async function POST(request: Request) {
         await tx.salesOrderPayment.create({
           data: {
             order_id: createdOrder.order_id,
+            staff_id: session.staffId,
             amount: totalAmount,
           },
         });
@@ -258,6 +264,11 @@ export async function POST(request: Request) {
           },
           payments: {
             orderBy: { paid_at: "asc" },
+            include: {
+              recordedBy: {
+                select: { staff_name: true },
+              },
+            },
           },
         },
       });

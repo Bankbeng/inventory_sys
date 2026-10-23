@@ -292,26 +292,26 @@ body {
     margin: 8mm;
   }
 
-  body {
+  body:has(.invoice-overlay) {
     background: white !important;
   }
 
-  body > *:not(#app-content) {
+  body:has(.invoice-overlay) > *:not(#app-content) {
     display: none !important;
   }
 
-  #app-content {
+  body:has(.invoice-overlay) #app-content {
     display: block !important;
     min-height: 0 !important;
     padding: 0 !important;
   }
 
-  #app-content > main {
+  body:has(.invoice-overlay) #app-content > main {
     min-height: 0 !important;
     padding: 0 !important;
   }
 
-  #app-content > main > *:not(.invoice-overlay) {
+  body:has(.invoice-overlay) #app-content > main > *:not(.invoice-overlay) {
     display: none !important;
   }
 

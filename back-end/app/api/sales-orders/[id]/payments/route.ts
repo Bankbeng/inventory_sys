@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { getSessionFromRequest } from "@/lib/session";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "http://localhost:3001",
@@ -26,6 +27,14 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401, headers: corsHeaders },
+    );
+  }
+
   try {
     const { id } = await params;
     const orderId = parseId(id);
@@ -80,6 +89,7 @@ export async function POST(
       await tx.salesOrderPayment.create({
         data: {
           order_id: orderId,
+          staff_id: session.staffId,
           amount,
           ...(note ? { note } : {}),
         },
@@ -96,6 +106,11 @@ export async function POST(
         include: {
           payments: {
             orderBy: { paid_at: "asc" },
+            include: {
+              recordedBy: {
+                select: { staff_name: true },
+              },
+            },
           },
         },
       });

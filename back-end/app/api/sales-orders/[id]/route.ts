@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { getSessionFromRequest } from "@/lib/session";
 
 function parseId(id: string) {
   const parsed = Number(id);
@@ -48,6 +49,11 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -103,6 +109,7 @@ export async function PATCH(
         await tx.salesOrderPayment.create({
           data: {
             order_id: orderId,
+            staff_id: session.staffId,
             amount: updatedTotal - amountPaid,
           },
         });
