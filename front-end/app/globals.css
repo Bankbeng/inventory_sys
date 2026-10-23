@@ -1,13 +1,53 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f3f6fb;
+  --foreground: #111c2f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-slate-50: #f4f7fb;
+  --color-slate-100: #e8eef5;
+  --color-slate-200: #cbd5e1;
+  --color-slate-300: #94a3b8;
+  --color-slate-400: #64748b;
+  --color-slate-500: #475569;
+  --color-slate-600: #334155;
+  --color-slate-700: #1e293b;
+  --color-slate-800: #172554;
+  --color-slate-900: #111c2f;
+  --color-slate-950: #080f1e;
+  --color-cyan-50: #ecfeff;
+  --color-cyan-100: #cffafe;
+  --color-cyan-200: #a5f3fc;
+  --color-cyan-300: #67e8f9;
+  --color-cyan-400: #22d3ee;
+  --color-cyan-500: #007e95;
+  --color-cyan-600: #006b82;
+  --color-cyan-700: #00566b;
+  --color-cyan-800: #164e63;
+  --color-cyan-900: #083344;
+  --color-amber-700: #8a3b00;
+  --color-rose-600: #c62828;
+  --color-rose-700: #b42318;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.45;
+  --text-base: 1rem;
+  --text-base--line-height: 1.55;
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: 1.45;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.35;
+  --text-2xl: 1.625rem;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 1.2;
+  --text-4xl: 2.5rem;
+  --text-4xl--line-height: 1.15;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -17,13 +57,35 @@ html {
 }
 
 body {
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "Noto Sans Lao", "Phetsarath OT", "Lao UI", Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.55;
 }
 
 * {
   box-sizing: border-box;
+}
+
+#app-content > main {
+  background-color: var(--background);
+}
+
+:focus-visible {
+  outline: 3px solid #007e95;
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  font-size: 1rem;
+}
+
+::selection {
+  background: #a5f3fc;
+  color: #083344;
 }
 
 .dvk-mark {

@@ -19,6 +19,8 @@ model Staff {
   inventoryTransactions InventoryTransaction[]
   salesOrders           SalesOrder[]
   recordedPayments      SalesOrderPayment[] @relation("paymentRecorder")
+  inventoryAcknowledgements InventoryTransactionAcknowledgement[]
+  salesAcknowledgements SalesOrderAcknowledgement[]
 
   @@map("STAFF")
 }
@@ -125,6 +127,7 @@ model InventoryTransaction {
   fromVehicle   Vehicle?            @relation("fromVehicle", fields: [from_vehicle_id], references: [vehicle_id])
   toVehicle     Vehicle?            @relation("toVehicle", fields: [to_vehicle_id], references: [vehicle_id])
   details       TransactionDetail[]
+  acknowledgements InventoryTransactionAcknowledgement[]
 
   @@map("INVENTORY_TRANSACTION")
 }
@@ -158,8 +161,35 @@ model SalesOrder {
   sourceWarehouse Warehouse?          @relation(fields: [source_warehouse_id], references: [warehouse_id])
   details         SalesOrderDetail[]
   payments        SalesOrderPayment[]
+  acknowledgements SalesOrderAcknowledgement[]
 
   @@map("SALES_ORDER")
+}
+
+model InventoryTransactionAcknowledgement {
+  transaction_id  Int
+  staff_id        Int
+  acknowledged_at DateTime @default(now())
+
+  transaction InventoryTransaction @relation(fields: [transaction_id], references: [transaction_id], onDelete: Cascade)
+  staff       Staff                @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade)
+
+  @@id([transaction_id, staff_id])
+  @@index([staff_id])
+  @@map("INVENTORY_TRANSACTION_ACKNOWLEDGEMENT")
+}
+
+model SalesOrderAcknowledgement {
+  order_id        Int
+  staff_id        Int
+  acknowledged_at DateTime @default(now())
+
+  order SalesOrder @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
+  staff Staff      @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade)
+
+  @@id([order_id, staff_id])
+  @@index([staff_id])
+  @@map("SALES_ORDER_ACKNOWLEDGEMENT")
 }
 
 model SalesOrderPayment {

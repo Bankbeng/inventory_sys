@@ -35,6 +35,12 @@ export async function GET() {
             },
           },
         },
+        acknowledgements: {
+          orderBy: { acknowledged_at: "asc" },
+          include: {
+            staff: { select: { staff_name: true } },
+          },
+        },
       },
     });
 

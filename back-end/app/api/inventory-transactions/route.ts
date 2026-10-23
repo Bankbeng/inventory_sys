@@ -24,6 +24,12 @@ export async function GET() {
         fromVehicle: true,
         toVehicle: true,
         details: true,
+        acknowledgements: {
+          orderBy: { acknowledged_at: "asc" },
+          include: {
+            staff: { select: { staff_name: true } },
+          },
+        },
       },
     });
 
