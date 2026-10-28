@@ -53,6 +53,7 @@ export default function RemainingStockPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [displayMode, setDisplayMode] = useState<StockDisplayMode>("product");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -107,16 +108,32 @@ export default function RemainingStockPage() {
   const categories = Array.from(
     new Set(products.map((product) => product.category?.trim()).filter((category) => category)),
   ).sort((left, right) => left.localeCompare(right));
-  const matchingProductIds = new Set(
-    products
-      .filter((product) => selectedCategory === "all" || product.category?.trim() === selectedCategory)
-      .map((product) => product.product_id),
-  );
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredProducts = products.filter((product) => {
+    const categoryMatches = selectedCategory === "all" || product.category?.trim() === selectedCategory;
+    if (!categoryMatches) return false;
+    if (!normalizedSearch) return true;
+
+    const searchableText = [
+      product.product_name,
+      product.category,
+      product.type,
+      product.size,
+      product.unit,
+      String(product.product_id),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return searchableText.includes(normalizedSearch);
+  });
+
+  const matchingProductIds = new Set(filteredProducts.map((product) => product.product_id));
   const visibleWarehouseStocks = sortedWarehouseStocks.filter((item) => matchingProductIds.has(item.product_id));
   const visibleVehicleStocks = sortedVehicleStocks.filter((item) => matchingProductIds.has(item.product_id));
 
-  const remainingProductRows = products
-    .filter((product) => matchingProductIds.has(product.product_id))
+  const remainingProductRows = filteredProducts
     .map((product) => {
       const warehouseEntries = warehouseStocks
         .filter((item) => item.product_id === product.product_id)
@@ -155,6 +172,16 @@ export default function RemainingStockPage() {
           </div>
           {!loading && !error && (
             <div className="flex flex-wrap items-end gap-3">
+              <label className="text-sm text-slate-700">
+                <span className="mb-2 block">Search</span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search product, category, type, or ID"
+                  className="w-72 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-400"
+                />
+              </label>
               <label className="text-sm text-slate-700">
                 <span className="mb-2 block">Category</span>
                 <select

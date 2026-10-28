@@ -7,17 +7,17 @@ import BrandMark from "./BrandMark";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/stock", label: "Stock" },
-  { href: "/stock-remaining", label: "Remaining stock" },
-  { href: "/products", label: "Products" },
-  { href: "/staff", label: "Staff" },
-  { href: "/customers", label: "Customers" },
-  { href: "/warehouses", label: "Warehouses" },
-  { href: "/vehicles", label: "Vehicles" },
-  { href: "/sales", label: "Sales" },
-  { href: "/accounts-receivable", label: "Receivables" },
-  { href: "/sales-kpi", label: "Sales KPI" },
-  { href: "/transactions", label: "Transactions" },
+  { href: "/stock", label: "ຂົນຍ້າຍ" },
+  { href: "/stock-remaining", label: "ເຄື່ອງຍັງເຫຼືອ" },
+  { href: "/products", label: "ສິນຄ້າ" },
+  { href: "/staff", label: "ພະນັກງານ" },
+  { href: "/customers", label: "ລູກຄ້າ" },
+  { href: "/warehouses", label: "ສາງ" },
+  { href: "/vehicles", label: "ລົດ" },
+  { href: "/sales", label: "ຂາຍ" },
+  { href: "/accounts-receivable", label: "ໜີ້ຕ້ອງຮັບ" },
+  { href: "/sales-kpi", label: "ຍອດຂາຍ" },
+  { href: "/transactions", label: "ປະຫວັດ" },
 ];
 
 export default function TopNav() {
@@ -111,7 +111,7 @@ export default function TopNav() {
             disabled={loggingOut}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-600 hover:bg-cyan-50 hover:text-cyan-900 disabled:opacity-60"
           >
-            {loggingOut ? "Signing out..." : "Sign out"}
+            {loggingOut ? "Signing out..." : "ອອກຈາກລະບົບ"}
           </button>
           <button
             type="button"
