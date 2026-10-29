@@ -15,8 +15,24 @@ type SalesOrder = {
   details?: {
     quantity_sold: number;
     sold_at_price: number;
-    product?: { category: string };
+    product?: {
+      product_id: number;
+      product_name: string;
+      category: string;
+      type: string;
+      size: string;
+      unit: string;
+    };
   }[];
+};
+
+type ProductSales = {
+  productId: number;
+  name: string;
+  category: string;
+  unit: string;
+  quantitySold: number;
+  revenue: number;
 };
 
 type SalesPeriod = "all" | "range";
@@ -83,17 +99,37 @@ export default function DashboardPage() {
   });
   const totalSales = periodOrders.reduce((sum, order) => sum + (order.total_amount ?? 0), 0);
   const categoryTotals = new Map<string, number>();
+  const productTotals = new Map<number, ProductSales>();
   for (const order of periodOrders) {
     for (const detail of order.details ?? []) {
       const category = detail.product?.category || "Uncategorized";
-      const lineTotal = (detail.quantity_sold ?? 0) * (detail.sold_at_price ?? 0);
+      const quantity = Number(detail.quantity_sold) || 0;
+      const lineTotal = quantity * (Number(detail.sold_at_price) || 0);
       categoryTotals.set(category, (categoryTotals.get(category) ?? 0) + lineTotal);
+
+      const productId = detail.product?.product_id;
+      if (productId === undefined) continue;
+
+      const current = productTotals.get(productId) ?? {
+        productId,
+        name: detail.product?.product_name || `Product ${productId}`,
+        category,
+        unit: detail.product?.unit || "",
+        quantitySold: 0,
+        revenue: 0,
+      };
+      current.quantitySold += quantity;
+      current.revenue += lineTotal;
+      productTotals.set(productId, current);
     }
   }
   const categorySales = [...categoryTotals.entries()]
     .map(([category, amount]) => ({ category, amount }))
     .sort((first, second) => second.amount - first.amount || first.category.localeCompare(second.category));
   const categorySalesTotal = categorySales.reduce((sum, item) => sum + item.amount, 0);
+  const productSales = [...productTotals.values()].sort(
+    (first, second) => second.revenue - first.revenue || second.quantitySold - first.quantitySold || first.name.localeCompare(second.name),
+  );
   const salesTotalMessage = salesPeriod === "all"
     ? "Combined value of all recorded sales orders"
     : !startDate || !endDate
@@ -212,6 +248,46 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <p className="py-4 text-sm text-slate-500">No category sales recorded for this period.</p>
+              )}
+            </section>
+
+            <section aria-labelledby="product-sales-heading" className="border-b border-slate-300 py-6">
+              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+                <h2 id="product-sales-heading" className="text-lg font-semibold text-slate-950">Sales by product</h2>
+                <p className="text-xs text-slate-500">Ranked by revenue · quantity sold in the selected period</p>
+              </div>
+              {salesPeriod === "range" && !validDateRange ? (
+                <p className="py-4 text-sm text-slate-500">Select a valid date range to see product sales.</p>
+              ) : productSales.length > 0 ? (
+                <div className="overflow-x-auto border-y border-slate-200">
+                  <table className="w-full min-w-120 text-left text-sm">
+                    <thead className="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                      <tr>
+                        <th scope="col" className="w-16 py-3 pr-4 font-medium">Rank</th>
+                        <th scope="col" className="py-3 pr-4 font-medium">Product</th>
+                        <th scope="col" className="py-3 pr-4 font-medium">Category</th>
+                        <th scope="col" className="py-3 pr-4 text-right font-medium">Qty sold</th>
+                        <th scope="col" className="py-3 text-right font-medium">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {productSales.map((item, index) => (
+                        <tr key={item.productId}>
+                          <td className="py-3 pr-4 font-mono text-xs text-slate-500">{index + 1}</td>
+                          <td className="py-3 pr-4 font-medium text-slate-800">
+                            {item.name}
+                            {item.unit && <span className="ml-1 text-xs font-normal text-slate-500">({item.unit})</span>}
+                          </td>
+                          <td className="py-3 pr-4 text-slate-600">{item.category}</td>
+                          <td className="py-3 pr-4 text-right font-medium tabular-nums text-slate-800">{item.quantitySold}</td>
+                          <td className="py-3 text-right font-semibold tabular-nums text-teal-800">{formatCurrency(item.revenue)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="py-4 text-sm text-slate-500">No product sales recorded for this period.</p>
               )}
             </section>
 

@@ -33,6 +33,13 @@ type Vehicle = {
   vehicle_name: string;
 };
 
+type ProductStock = {
+  product_id: number;
+  quantity: number;
+  warehouse_id?: number;
+  vehicle_id?: number;
+};
+
 type OrderDetail = {
   product_id: number;
   quantity_sold: number;
@@ -105,32 +112,63 @@ export default function SalesPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [warehouseStocks, setWarehouseStocks] = useState<ProductStock[]>([]);
+  const [vehicleStocks, setVehicleStocks] = useState<ProductStock[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stockLoading, setStockLoading] = useState(true);
+  const [stockError, setStockError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [invoiceOrder, setInvoiceOrder] = useState<SalesOrder | null>(null);
   const [form, setForm] = useState<SaleForm>(initialForm);
 
   const loadSalesData = useCallback(async () => {
+    setStockLoading(true);
+    setStockError(null);
+
     try {
-      const [salesResponse, productResponse, warehouseResponse, vehicleResponse, customerResponse] = await Promise.all([
+      const [
+        salesResponse,
+        productResponse,
+        warehouseResponse,
+        vehicleResponse,
+        customerResponse,
+        warehouseStockResponse,
+        vehicleStockResponse,
+      ] = await Promise.all([
         fetch(`${API_BASE_URL}/api/sales-orders`),
         fetch(`${API_BASE_URL}/api/products`),
         fetch(`${API_BASE_URL}/api/warehouses`),
         fetch(`${API_BASE_URL}/api/vehicles`),
         fetch(`${API_BASE_URL}/api/customers`),
+        fetch(`${API_BASE_URL}/api/warehouse-stocks`),
+        fetch(`${API_BASE_URL}/api/vehicle-stocks`),
       ]);
 
       if (!customerResponse.ok) {
         throw new Error("Failed to load customer records.");
       }
 
-      const [salesData, productData, warehouseData, vehicleData, customerData] = await Promise.all([
+      if (!warehouseStockResponse.ok || !vehicleStockResponse.ok) {
+        throw new Error("Failed to load stock availability.");
+      }
+
+      const [
+        salesData,
+        productData,
+        warehouseData,
+        vehicleData,
+        customerData,
+        warehouseStockData,
+        vehicleStockData,
+      ] = await Promise.all([
         salesResponse.json(),
         productResponse.json(),
         warehouseResponse.json(),
         vehicleResponse.json(),
         customerResponse.json(),
+        warehouseStockResponse.json(),
+        vehicleStockResponse.json(),
       ]);
 
       const nextSales = Array.isArray(salesData) ? salesData : [];
@@ -138,12 +176,16 @@ export default function SalesPage() {
       const nextWarehouses = Array.isArray(warehouseData) ? warehouseData : [];
       const nextVehicles = Array.isArray(vehicleData) ? vehicleData : [];
       const nextCustomers = Array.isArray(customerData) ? customerData : [];
+      const nextWarehouseStocks = Array.isArray(warehouseStockData) ? warehouseStockData : [];
+      const nextVehicleStocks = Array.isArray(vehicleStockData) ? vehicleStockData : [];
 
       setSales(nextSales);
       setProducts(nextProducts);
       setWarehouses(nextWarehouses);
       setVehicles(nextVehicles);
       setCustomers(nextCustomers);
+      setWarehouseStocks(nextWarehouseStocks);
+      setVehicleStocks(nextVehicleStocks);
 
       if (nextProducts[0]) {
         setForm((current) => ({
@@ -164,8 +206,10 @@ export default function SalesPage() {
     } catch (error) {
       console.error("Failed to load sales data", error);
       setMessage("Failed to load sales data.");
+      setStockError("Stock availability could not be loaded.");
     } finally {
       setLoading(false);
+      setStockLoading(false);
     }
   }, []);
 
@@ -260,7 +304,7 @@ export default function SalesPage() {
       return;
     }
 
-    if (validLines.length === 0) {
+    if (validLines.length === 0 || validLines.length !== form.lines.length) {
       setMessage("Please add at least one valid product item.");
       return;
     }
@@ -272,9 +316,8 @@ export default function SalesPage() {
       const payload = {
         customer_id: Number(form.customerId),
         is_paid: form.paymentStatus === "paid",
-        ...(form.sourceType === "warehouse"
-          ? { source_warehouse_id: Number(form.sourceId) }
-          : { source_vehicle_id: Number(form.sourceId) }),
+        source_warehouse_id: form.sourceType === "warehouse" ? Number(form.sourceId) : null,
+        source_vehicle_id: form.sourceType === "vehicle" ? Number(form.sourceId) : null,
         total_amount: totalValue,
         items: validLines.map((line) => ({
           product_id: Number(line.productId),
@@ -292,7 +335,7 @@ export default function SalesPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Sale creation failed");
+        throw new Error(data.error || "Failed to save sales order.");
       }
 
       setForm({
@@ -398,7 +441,30 @@ export default function SalesPage() {
           </div>
 
           <div className="mt-6 space-y-4">
-            {form.lines.map((line, index) => (
+            {form.lines.map((line, index) => {
+              const selectedProduct = products.find(
+                (product) => String(product.product_id) === line.productId,
+              );
+              const sourceStocks = form.sourceType === "warehouse" ? warehouseStocks : vehicleStocks;
+              const stockQuantity = form.sourceId && line.productId
+                ? sourceStocks.find((stock) =>
+                    String(stock.product_id) === line.productId &&
+                    String(form.sourceType === "warehouse" ? stock.warehouse_id : stock.vehicle_id) === form.sourceId,
+                  )?.quantity ?? 0
+                : null;
+              const availableStock = stockQuantity;
+              const orderQuantity = line.productId
+                ? form.lines.reduce(
+                    (sum, currentLine) =>
+                      currentLine.productId === line.productId
+                        ? sum + (Number(currentLine.quantity) || 0)
+                        : sum,
+                    0,
+                  )
+                : 0;
+              const remainingAfterSale = availableStock === null ? null : availableStock - orderQuantity;
+
+              return (
               <div key={index} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.5fr_0.8fr_0.9fr_auto]">
                 <label className="text-sm text-slate-700">
                   <SearchableSelect
@@ -406,7 +472,7 @@ export default function SalesPage() {
                     options={productOptions}
                     value={line.productId}
                     onChange={(productId) => {
-                      const selectedProduct = products.find(
+                      const nextProduct = products.find(
                         (product) => String(product.product_id) === productId,
                       );
 
@@ -417,7 +483,7 @@ export default function SalesPage() {
                             ? {
                                 ...currentLine,
                                 productId,
-                                price: selectedProduct ? String(selectedProduct.retail_price) : "0",
+                                price: nextProduct ? String(nextProduct.retail_price) : "0",
                               }
                             : currentLine,
                         ),
@@ -425,6 +491,27 @@ export default function SalesPage() {
                     }}
                     placeholder="Search product name"
                   />
+                  {selectedProduct && (
+                    <span
+                      className={`mt-1 block text-xs ${
+                        remainingAfterSale !== null && remainingAfterSale < 0
+                          ? "text-rose-700"
+                          : "text-slate-500"
+                      }`}
+                      role={remainingAfterSale !== null && remainingAfterSale < 0 ? "alert" : undefined}
+                    >
+                      {stockLoading
+                        ? "Loading stock..."
+                        : stockError
+                          ? stockError
+                          : availableStock === null
+                            ? "Select a source to see stock."
+                            : `Available: ${availableStock} ${selectedProduct.unit || "units"} · After this order: ${remainingAfterSale} ${selectedProduct.unit || "units"}`}
+                      {!stockLoading && !stockError && remainingAfterSale !== null && remainingAfterSale < 0
+                        ? ` (short by ${Math.abs(remainingAfterSale)})`
+                        : ""}
+                    </span>
+                  )}
                 </label>
 
                 <label className="text-sm text-slate-700">
@@ -461,7 +548,8 @@ export default function SalesPage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
@@ -497,7 +585,7 @@ export default function SalesPage() {
             Loading sales orders...
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
               <thead className="bg-slate-100 text-slate-600">
                 <tr>

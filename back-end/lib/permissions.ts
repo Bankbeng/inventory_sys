@@ -9,11 +9,15 @@ export const APP_PAGES = [
   { path: "/warehouses", label: "Warehouses" },
   { path: "/vehicles", label: "Vehicles" },
   { path: "/sales", label: "Sales" },
+  { path: "/sales-management", label: "Sales order management" },
   { path: "/accounts-receivable", label: "Receivables" },
   { path: "/sales-kpi", label: "Sales KPI" },
   { path: "/transactions", label: "Transactions" },
   { path: "/staff", label: "Staff management" },
 ] as const;
+
+const ADMIN_ONLY_PAGES = new Set(["/staff"]);
+const DEFAULT_DENIED_PAGES = new Set(["/staff", "/sales-management"]);
 
 export function normalizeRole(role: string) {
   return role.trim().toLocaleLowerCase();
@@ -34,17 +38,19 @@ export async function getAllowedPages(role: string) {
   });
 
   if (permissions.length === 0) {
-    return APP_PAGES.filter(({ path }) => path !== "/staff").map(({ path }) => path);
+    return APP_PAGES.filter(({ path }) => !DEFAULT_DENIED_PAGES.has(path)).map(({ path }) => path);
   }
 
-  return permissions.filter(({ can_access }) => can_access).map(({ page_path }) => page_path);
+  return permissions
+    .filter(({ can_access, page_path }) => can_access && !ADMIN_ONLY_PAGES.has(page_path))
+    .map(({ page_path }) => page_path);
 }
 
 export async function canAccessPage(role: string, pagePath: string) {
   if (!APP_PAGES.some(({ path }) => path === pagePath)) {
     return false;
   }
-  if (pagePath === "/staff") {
+  if (ADMIN_ONLY_PAGES.has(pagePath)) {
     return isAdminRole(role);
   }
   const allowedPages = await getAllowedPages(role);
@@ -75,6 +81,12 @@ export function pagesForApi(path: string, method: string): string[] | null {
     return ["/transactions"];
   }
   if (path.startsWith("/api/sales-orders")) {
+    if (method === "POST") {
+      return ["/sales"];
+    }
+    if (method === "PATCH" || method === "DELETE") {
+      return ["/sales-management"];
+    }
     return ["/sales", "/accounts-receivable", "/sales-kpi", "/dashboard", "/transactions"];
   }
   if (path.startsWith("/api/products")) {

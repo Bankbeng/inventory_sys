@@ -35,12 +35,24 @@ export async function GET(request: Request) {
       .map((role) => {
         const normalizedRole = normalizeRole(role);
         const permissions = storedPermissions.filter((permission) => permission.role_name === normalizedRole);
+        const configurablePages = APP_PAGES.filter(
+          ({ path }) => path !== "/staff",
+        );
         const accessiblePages = permissions.length === 0
-          ? APP_PAGES.filter(({ path }) => path !== "/staff").map(({ path }) => path)
-          : permissions.filter(({ can_access }) => can_access).map(({ page_path }) => page_path);
+          ? configurablePages
+              .filter(({ path }) => path !== "/sales-management")
+              .map(({ path }) => path)
+          : permissions
+              .filter(({ can_access, page_path }) =>
+                can_access && page_path !== "/staff",
+              )
+              .map(({ page_path }) => page_path);
         return { role_name: role, accessible_pages: accessiblePages };
       });
-    return NextResponse.json({ pages: APP_PAGES.filter(({ path }) => path !== "/staff"), roles });
+    return NextResponse.json({
+      pages: APP_PAGES.filter(({ path }) => path !== "/staff"),
+      roles,
+    });
   } catch (error) {
     console.error("Failed to fetch role permissions", error);
     return NextResponse.json({ error: "Failed to fetch role permissions" }, { status: 500 });

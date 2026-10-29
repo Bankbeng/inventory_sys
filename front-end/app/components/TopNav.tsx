@@ -15,6 +15,7 @@ const navItems = [
   { href: "/warehouses", label: "ສາງ" },
   { href: "/vehicles", label: "ລົດ" },
   { href: "/sales", label: "ຂາຍ" },
+  { href: "/sales-management", label: "Manage sales orders" },
   { href: "/accounts-receivable", label: "ໜີ້ຕ້ອງຮັບ" },
   { href: "/sales-kpi", label: "ຍອດຂາຍ" },
   { href: "/transactions", label: "ປະຫວັດ" },

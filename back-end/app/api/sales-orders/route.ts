@@ -164,6 +164,48 @@ export async function POST(request: Request) {
     }
 
     const order = await prisma.$transaction(async (tx) => {
+      for (const item of normalizedItems) {
+        const product = await tx.product.findUnique({
+          where: { product_id: item.product_id },
+        });
+
+        if (!product) {
+          throw new Error(`Product ${item.product_id} not found`);
+        }
+
+        if (sourceWarehouseId !== null) {
+          const stockUpdate = await tx.warehouseStock.updateMany({
+            where: {
+              warehouse_id: sourceWarehouseId,
+              product_id: item.product_id,
+              quantity: { gte: item.quantity_sold },
+            },
+            data: {
+              quantity: { decrement: item.quantity_sold },
+            },
+          });
+
+          if (stockUpdate.count === 0) {
+            throw new Error(`Insufficient stock for product ${product.product_name} in the selected warehouse`);
+          }
+        } else if (sourceVehicleId !== null) {
+          const stockUpdate = await tx.vehicleStock.updateMany({
+            where: {
+              vehicle_id: sourceVehicleId,
+              product_id: item.product_id,
+              quantity: { gte: item.quantity_sold },
+            },
+            data: {
+              quantity: { decrement: item.quantity_sold },
+            },
+          });
+
+          if (stockUpdate.count === 0) {
+            throw new Error(`Insufficient stock for product ${product.product_name} in the selected vehicle`);
+          }
+        }
+      }
+
       const createdOrder = await tx.salesOrder.create({
         data: {
           customer_name: customerName,
@@ -187,66 +229,6 @@ export async function POST(request: Request) {
       }
 
       for (const item of normalizedItems) {
-        const product = await tx.product.findUnique({
-          where: { product_id: item.product_id },
-        });
-
-        if (!product) {
-          throw new Error(`Product ${item.product_id} not found`);
-        }
-
-        if (sourceWarehouseId !== null) {
-          const stock = await tx.warehouseStock.findUnique({
-            where: {
-              warehouse_id_product_id: {
-                warehouse_id: sourceWarehouseId,
-                product_id: item.product_id,
-              },
-            },
-          });
-
-          if (!stock || stock.quantity < item.quantity_sold) {
-            throw new Error(`Insufficient stock for product ${product.product_name} in the selected warehouse`);
-          }
-
-          await tx.warehouseStock.update({
-            where: {
-              warehouse_id_product_id: {
-                warehouse_id: sourceWarehouseId,
-                product_id: item.product_id,
-              },
-            },
-            data: {
-              quantity: stock.quantity - item.quantity_sold,
-            },
-          });
-        } else if (sourceVehicleId !== null) {
-          const stock = await tx.vehicleStock.findUnique({
-            where: {
-              vehicle_id_product_id: {
-                vehicle_id: sourceVehicleId,
-                product_id: item.product_id,
-              },
-            },
-          });
-
-          if (!stock || stock.quantity < item.quantity_sold) {
-            throw new Error(`Insufficient stock for product ${product.product_name} in the selected vehicle`);
-          }
-
-          await tx.vehicleStock.update({
-            where: {
-              vehicle_id_product_id: {
-                vehicle_id: sourceVehicleId,
-                product_id: item.product_id,
-              },
-            },
-            data: {
-              quantity: stock.quantity - item.quantity_sold,
-            },
-          });
-        }
-
         await tx.salesOrderDetail.create({
           data: {
             order_id: createdOrder.order_id,
