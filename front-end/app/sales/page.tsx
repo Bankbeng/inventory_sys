@@ -51,6 +51,7 @@ type SalesOrder = {
   order_id: number;
   customer_name?: string;
   customer?: Pick<Customer, "customer_name" | "phone_number" | "place_link"> | null;
+  discount_amount: number;
   total_amount: number;
   is_paid: boolean;
   order_date: string;
@@ -71,6 +72,7 @@ type SaleForm = {
   paymentStatus: "paid" | "unpaid";
   sourceType: "warehouse" | "vehicle";
   sourceId: string;
+  discountAmount: string;
   lines: SaleLine[];
 };
 
@@ -85,6 +87,7 @@ const initialForm: SaleForm = {
   paymentStatus: "paid",
   sourceType: "warehouse",
   sourceId: "",
+  discountAmount: "0",
   lines: [buildEmptyLine()],
 };
 
@@ -245,6 +248,11 @@ export default function SalesPage() {
       }, 0),
     [form.lines],
   );
+  const discountValue = Number(form.discountAmount);
+  const orderTotal = Math.max(
+    0,
+    totalValue - (Number.isFinite(discountValue) ? discountValue : 0),
+  );
 
   const invoiceDetails = invoiceOrder?.details ?? [];
   const invoiceSubtotal = invoiceDetails.reduce(
@@ -309,6 +317,11 @@ export default function SalesPage() {
       return;
     }
 
+    if (!Number.isFinite(discountValue) || discountValue < 0 || discountValue > totalValue) {
+      setMessage("Discount must be between 0 and the item subtotal.");
+      return;
+    }
+
     setSaving(true);
     setMessage(null);
 
@@ -318,7 +331,8 @@ export default function SalesPage() {
         is_paid: form.paymentStatus === "paid",
         source_warehouse_id: form.sourceType === "warehouse" ? Number(form.sourceId) : null,
         source_vehicle_id: form.sourceType === "vehicle" ? Number(form.sourceId) : null,
-        total_amount: totalValue,
+        discount_amount: discountValue,
+        total_amount: orderTotal,
         items: validLines.map((line) => ({
           product_id: Number(line.productId),
           quantity_sold: Number(line.quantity),
@@ -343,6 +357,7 @@ export default function SalesPage() {
         paymentStatus: "paid",
         sourceType: "warehouse",
         sourceId: warehouses[0] ? String(warehouses[0].warehouse_id) : "",
+        discountAmount: "0",
         lines: [buildEmptyLine()],
       });
       await loadSalesData();
@@ -561,9 +576,28 @@ export default function SalesPage() {
               Add item
             </button>
 
-            <div className="text-right">
-              <p className="text-sm text-slate-500">Order total</p>
-              <p className="text-2xl font-bold text-cyan-700">{formatCurrency(totalValue)}</p>
+            <div className="grid gap-3 sm:grid-cols-[minmax(12rem,1fr)_auto] sm:items-end">
+              <label className="text-sm text-slate-700">
+                <span className="mb-2 block">Discount amount</span>
+                <input
+                  type="number"
+                  min="0"
+                  max={totalValue}
+                  step="0.01"
+                  value={form.discountAmount}
+                  onChange={(event) => setForm((current) => ({
+                    ...current,
+                    discountAmount: event.target.value,
+                  }))}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
+                />
+              </label>
+              <div className="text-right">
+                <p className="text-sm text-slate-500">Subtotal: {formatCurrency(totalValue)}</p>
+                <p className="text-sm text-slate-500">Discount: {formatCurrency(Number.isFinite(discountValue) ? discountValue : 0)}</p>
+                <p className="text-sm text-slate-500">Order total</p>
+                <p className="text-2xl font-bold text-cyan-700">{formatCurrency(orderTotal)}</p>
+              </div>
             </div>
           </div>
 
@@ -757,7 +791,7 @@ export default function SalesPage() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <th colSpan={4}>Total</th>
+                      <th colSpan={4}>Subtotal</th>
                       <th>{invoiceQuantity}</th>
                       <th></th>
                       <th></th>
@@ -769,6 +803,14 @@ export default function SalesPage() {
 
               <div className="invoice-summary">
                 <dl>
+                  <div>
+                    <dt>Subtotal</dt>
+                    <dd>{formatCurrency(invoiceSubtotal)}</dd>
+                  </div>
+                  <div>
+                    <dt>Discount</dt>
+                    <dd>-{formatCurrency(Number(invoiceOrder.discount_amount || 0))}</dd>
+                  </div>
                   <div className="invoice-grand-total">
                     <dt>Grand total</dt>
                     <dd>{formatCurrency(Number(invoiceOrder.total_amount || 0))}</dd>

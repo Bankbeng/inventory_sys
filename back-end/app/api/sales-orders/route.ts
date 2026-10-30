@@ -152,9 +152,22 @@ export async function POST(request: Request) {
       };
     });
 
-    const totalAmount = Number(
-      body.total_amount ?? normalizedItems.reduce((sum, item) => sum + item.quantity_sold * item.sold_at_price, 0),
+    const itemSubtotal = normalizedItems.reduce(
+      (sum, item) => sum + item.quantity_sold * item.sold_at_price,
+      0,
     );
+    const discountAmount = body.discount_amount === undefined ? 0 : Number(body.discount_amount);
+
+    if (!Number.isFinite(discountAmount) || discountAmount < 0 || discountAmount > itemSubtotal) {
+      return NextResponse.json(
+        { error: "discount_amount must be between 0 and the item subtotal" },
+        { status: 400, headers: corsHeaders },
+      );
+    }
+
+    const totalAmount = body.discount_amount === undefined
+      ? Number(body.total_amount ?? itemSubtotal)
+      : itemSubtotal - discountAmount;
 
     if (!Number.isFinite(totalAmount) || totalAmount < 0) {
       return NextResponse.json(
@@ -213,6 +226,7 @@ export async function POST(request: Request) {
           salesperson_id: salespersonId,
           source_vehicle_id: sourceVehicleId,
           source_warehouse_id: sourceWarehouseId,
+          discount_amount: discountAmount,
           total_amount: totalAmount,
           is_paid: isPaid,
         },

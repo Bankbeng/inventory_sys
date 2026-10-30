@@ -49,6 +49,7 @@ type SalesOrder = {
   order_id: number;
   customer_id: number | null;
   customer_name: string;
+  discount_amount: number;
   total_amount: number;
   is_paid: boolean;
   order_date: string;
@@ -70,6 +71,7 @@ type SaleForm = {
   customerId: string;
   sourceType: "warehouse" | "vehicle";
   sourceId: string;
+  discountAmount: string;
   lines: SaleLine[];
 };
 
@@ -98,6 +100,7 @@ export default function SalesManagementPage() {
     customerId: "",
     sourceType: "warehouse",
     sourceId: "",
+    discountAmount: "0",
     lines: [emptyLine()],
   });
   const [search, setSearch] = useState("");
@@ -168,9 +171,14 @@ export default function SalesManagementPage() {
     [products],
   );
   const sourceOptions = form.sourceType === "warehouse" ? warehouses : vehicles;
-  const total = form.lines.reduce(
+  const subtotal = form.lines.reduce(
     (sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.price) || 0),
     0,
+  );
+  const discountValue = Number(form.discountAmount);
+  const total = Math.max(
+    0,
+    subtotal - (Number.isFinite(discountValue) ? discountValue : 0),
   );
   const filteredOrders = orders.filter((order) => {
     const query = search.trim().toLocaleLowerCase();
@@ -189,6 +197,7 @@ export default function SalesManagementPage() {
       customerId: order.customer_id ? String(order.customer_id) : "",
       sourceType: order.source_vehicle_id !== null ? "vehicle" : "warehouse",
       sourceId: String(order.source_vehicle_id ?? order.source_warehouse_id ?? ""),
+      discountAmount: String(order.discount_amount ?? 0),
       lines: order.details.map((detail) => ({
         productId: String(detail.product_id),
         quantity: String(detail.quantity_sold),
@@ -206,6 +215,7 @@ export default function SalesManagementPage() {
       customerId: "",
       sourceType: "warehouse",
       sourceId: "",
+      discountAmount: "0",
       lines: [emptyLine()],
     });
     setMessage(null);
@@ -240,6 +250,10 @@ export default function SalesManagementPage() {
       setError("Each item needs a product, a positive whole-number quantity, and a valid price.");
       return;
     }
+    if (!Number.isFinite(discountValue) || discountValue < 0 || discountValue > subtotal) {
+      setError("Discount must be between 0 and the item subtotal.");
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -252,6 +266,7 @@ export default function SalesManagementPage() {
           customer_id: Number(form.customerId),
           source_warehouse_id: form.sourceType === "warehouse" ? Number(form.sourceId) : null,
           source_vehicle_id: form.sourceType === "vehicle" ? Number(form.sourceId) : null,
+          discount_amount: discountValue,
           total_amount: total,
           items: form.lines.map((line) => ({
             product_id: Number(line.productId),
@@ -492,7 +507,28 @@ export default function SalesManagementPage() {
               >
                 Add item
               </button>
-              <p className="text-lg font-bold text-cyan-700">Order total: {formatCurrency(total)}</p>
+              <div className="grid gap-3 sm:grid-cols-[minmax(12rem,1fr)_auto] sm:items-end">
+                <label className="text-sm text-slate-700">
+                  <span className="mb-2 block">Discount amount</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max={subtotal}
+                    step="0.01"
+                    value={form.discountAmount}
+                    onChange={(event) => setForm((current) => ({
+                      ...current,
+                      discountAmount: event.target.value,
+                    }))}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2.5"
+                  />
+                </label>
+                <div className="text-right">
+                  <p className="text-sm text-slate-500">Subtotal: {formatCurrency(subtotal)}</p>
+                  <p className="text-sm text-slate-500">Discount: {formatCurrency(Number.isFinite(discountValue) ? discountValue : 0)}</p>
+                  <p className="text-lg font-bold text-cyan-700">Order total: {formatCurrency(total)}</p>
+                </div>
+              </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
               <button

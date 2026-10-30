@@ -39,6 +39,7 @@ type SalesOrder = {
   order_id: number;
   customer_name: string;
   order_date: string;
+  discount_amount: number;
   total_amount: number;
   salesperson?: { staff_name: string };
   sourceWarehouse?: { warehouse_name: string } | null;
@@ -376,6 +377,11 @@ export default function TransactionsPage() {
                             </span>
                           </div>
                         ))}
+                        {entry.order.discount_amount > 0 && (
+                          <div className="flex justify-end border-t border-slate-200 pt-2 text-slate-600">
+                            Discount: -{formatCurrency(Number(entry.order.discount_amount))}
+                          </div>
+                        )}
                         <div className="flex justify-end border-t border-slate-200 pt-2 font-semibold text-slate-800">
                           ລວມທັງໝົດ: {formatCurrency(Number(entry.order.total_amount))}
                         </div>

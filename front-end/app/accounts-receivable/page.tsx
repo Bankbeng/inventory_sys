@@ -8,6 +8,7 @@ import { formatDate, formatDateTime } from "@/lib/date";
 type Receivable = {
   order_id: number;
   customer_name: string;
+  discount_amount: number;
   total_amount: number;
   order_date: string;
   is_paid: boolean;
@@ -360,6 +361,14 @@ export default function AccountsReceivablePage() {
                                       </span>
                                     </li>
                                   ))}
+                                  {order.discount_amount > 0 && (
+                                    <li className="flex justify-between gap-3 border-t border-slate-200 pt-1 text-slate-600">
+                                      <span>Discount</span>
+                                      <span className="shrink-0 font-medium">
+                                        -{formatCurrency(order.discount_amount)}
+                                      </span>
+                                    </li>
+                                  )}
                                 </ul>
                               ) : (
                                 <p className="text-xs text-slate-500">No item details available.</p>

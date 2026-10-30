@@ -136,8 +136,20 @@ export async function PATCH(
         return items;
       }, new Map<number, SaleItem>());
       const combinedItems = [...itemMap.values()];
-      const nextTotal: number = body.items !== undefined
-        ? combinedItems.reduce((sum, item) => sum + item.quantity_sold * item.sold_at_price, 0)
+      const itemSubtotal = combinedItems.reduce(
+        (sum, item) => sum + item.quantity_sold * item.sold_at_price,
+        0,
+      );
+      const nextDiscount = body.discount_amount === undefined
+        ? currentOrder.discount_amount
+        : Number(body.discount_amount);
+
+      if (!Number.isFinite(nextDiscount) || nextDiscount < 0 || nextDiscount > itemSubtotal) {
+        throw new Error("discount_amount must be between 0 and the item subtotal");
+      }
+
+      const nextTotal: number = body.items !== undefined || body.discount_amount !== undefined
+        ? itemSubtotal - nextDiscount
         : Number(body.total_amount ?? currentOrder.total_amount);
 
       if (!Number.isFinite(nextTotal) || nextTotal < 0) {
@@ -290,6 +302,7 @@ export async function PATCH(
           ...(body.salesperson_id !== undefined ? { salesperson_id: Number(body.salesperson_id) } : {}),
           source_vehicle_id: nextSourceVehicleId,
           source_warehouse_id: nextSourceWarehouseId,
+          discount_amount: nextDiscount,
           total_amount: nextTotal,
         },
       });
