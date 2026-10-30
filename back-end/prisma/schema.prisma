@@ -129,6 +129,7 @@ model InventoryTransaction {
   details       TransactionDetail[]
   acknowledgements InventoryTransactionAcknowledgement[]
 
+  @@index([date_time, transaction_id])
   @@map("INVENTORY_TRANSACTION")
 }
 
@@ -164,6 +165,7 @@ model SalesOrder {
   payments        SalesOrderPayment[]
   acknowledgements SalesOrderAcknowledgement[]
 
+  @@index([order_date, order_id])
   @@map("SALES_ORDER")
 }
 

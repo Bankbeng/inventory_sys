@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
 
+import { corsHeaders } from "@/lib/cors";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { withoutPassword } from "@/lib/staff";
 import { requireStaffApiAccess } from "@/lib/staff-api-auth";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "http://localhost:3001",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
 
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });

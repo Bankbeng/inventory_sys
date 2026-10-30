@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { corsHeaders } from "@/lib/cors";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { withoutPassword } from "@/lib/staff";
@@ -8,12 +9,6 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_DURATION_SECONDS,
 } from "@/lib/session";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "http://localhost:3001",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
 
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
@@ -80,10 +75,9 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
+    console.error("Login failed", error);
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Login failed",
-      },
+      { error: "Login failed" },
       { status: 500, headers: corsHeaders },
     );
   }

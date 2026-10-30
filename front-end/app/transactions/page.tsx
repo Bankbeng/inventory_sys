@@ -83,34 +83,34 @@ function getAcknowledgementError(message: unknown) {
 }
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
+  const [historyItems, setHistoryItems] = useState<HistoryEntry[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [currentStaffId, setCurrentStaffId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingAcknowledgement, setPendingAcknowledgement] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      const [transactionResponse, salesResponse, productResponse, staffResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/inventory-transactions`),
-        fetch(`${API_BASE_URL}/api/sales-orders`),
+      setLoading(true);
+      const [historyResponse, productResponse, staffResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/history?page=${page}&pageSize=50&type=${filterType}`),
         fetch(`${API_BASE_URL}/api/products`),
         fetch("/api/access-check?all=true"),
       ]);
 
-      const [transactionData, salesData, productData, staffData] = await Promise.all([
-        transactionResponse.json(),
-        salesResponse.json(),
+      const [historyData, productData, staffData] = await Promise.all([
+        historyResponse.json(),
         productResponse.json(),
         staffResponse.json(),
       ]);
 
       for (const [response, label] of [
-        [transactionResponse, "ລາຍການເຄື່ອນໄຫວສາງ"],
-        [salesResponse, "ລາຍການຂາຍ"],
+        [historyResponse, "ປະຫວັດລາຍການ"],
         [productResponse, "ຂໍ້ມູນສິນຄ້າ"],
         [staffResponse, "ຂໍ້ມູນຜູ້ໃຊ້"],
       ] as const) {
@@ -120,16 +120,18 @@ export default function TransactionsPage() {
       }
 
       if (
-        !Array.isArray(transactionData) ||
-        !Array.isArray(salesData) ||
+        !Array.isArray(historyData.items) ||
+        !Number.isInteger(historyData.pagination?.totalPages) ||
+        !Number.isInteger(historyData.pagination?.totalItems) ||
         !Array.isArray(productData) ||
         !Number.isInteger(staffData.staff_id)
       ) {
         throw new Error("ຂໍ້ມູນປະຫວັດລາຍການເຄື່ອນໄຫວບໍ່ຖືກຕ້ອງ.");
       }
 
-      setTransactions(transactionData);
-      setSalesOrders(salesData);
+      setHistoryItems(historyData.items);
+      setTotalPages(historyData.pagination.totalPages);
+      setTotalItems(historyData.pagination.totalItems);
       setProducts(productData);
       setCurrentStaffId(staffData.staff_id);
       setErrorMessage(null);
@@ -139,7 +141,7 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filterType, page]);
 
   useEffect(() => {
     void Promise.resolve().then(loadData);
@@ -162,23 +164,25 @@ export default function TransactionsPage() {
         throw new Error(getAcknowledgementError(data.error));
       }
 
-      if (recordType === "inventory") {
-        setTransactions((current) =>
-          current.map((transaction) =>
-            transaction.transaction_id === recordId
-              ? { ...transaction, acknowledgements: [...(transaction.acknowledgements ?? []), data] }
-              : transaction,
-          ),
-        );
-      } else {
-        setSalesOrders((current) =>
-          current.map((order) =>
-            order.order_id === recordId
-              ? { ...order, acknowledgements: [...(order.acknowledgements ?? []), data] }
-              : order,
-          ),
-        );
-      }
+      setHistoryItems((current) => current.map((entry) => {
+        if (recordType === "inventory" && entry.type === "inventory" &&
+          entry.transaction.transaction_id === recordId) {
+          return {
+            ...entry,
+            transaction: {
+              ...entry.transaction,
+              acknowledgements: [...(entry.transaction.acknowledgements ?? []), data],
+            },
+          };
+        }
+        if (recordType === "sale" && entry.type === "SALE" && entry.order.order_id === recordId) {
+          return {
+            ...entry,
+            order: { ...entry.order, acknowledgements: [...(entry.order.acknowledgements ?? []), data] },
+          };
+        }
+        return entry;
+      }));
     } catch (error) {
       console.error("Failed to acknowledge transaction record", error);
       setErrorMessage(error instanceof Error ? error.message : "ບໍ່ສາມາດຮັບຊາບລາຍການໄດ້.");
@@ -187,23 +191,7 @@ export default function TransactionsPage() {
     }
   }
 
-  const history: HistoryEntry[] = [
-    ...transactions.map((transaction) => ({
-      type: "inventory" as const,
-      date: transaction.date_time,
-      transaction,
-    })),
-    ...salesOrders.map((order) => ({
-      type: "SALE" as const,
-      date: order.order_date,
-      order,
-    })),
-  ].sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
-  const filteredTransactions = history.filter((entry) => {
-    if (filterType === "all") return true;
-    if (filterType === "SALE") return entry.type === "SALE";
-    return entry.type === "inventory" && entry.transaction.transaction_type === filterType;
-  });
+  const filteredTransactions = historyItems;
 
   const getProductName = (productId: number): string => {
     const product = products.find((p) => p.product_id === productId);
@@ -317,7 +305,10 @@ export default function TransactionsPage() {
               <span className="text-sm text-slate-500">ກັ່ນຕອງ:</span>
               <select
                 value={filterType}
-                onChange={(event) => setFilterType(event.target.value)}
+                onChange={(event) => {
+                  setFilterType(event.target.value);
+                  setPage(1);
+                }}
                 className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-400"
               >
                 <option value="all">ທຸກລາຍການ</option>
@@ -327,7 +318,7 @@ export default function TransactionsPage() {
                 <option value="SALE">ການຂາຍ</option>
               </select>
               <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-medium text-cyan-700">
-                {filteredTransactions.length} ລາຍການ
+                {totalItems} ລາຍການ
               </span>
             </div>
           </div>
@@ -459,6 +450,30 @@ export default function TransactionsPage() {
           ) : (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-slate-500 text-center">
               ບໍ່ພົບລາຍການ.
+            </div>
+          )}
+
+          {!loading && !errorMessage && totalPages > 1 && (
+            <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4">
+              <span className="text-sm text-slate-500">Page {page} of {totalPages}</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page <= 1}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={page >= totalPages}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </section>

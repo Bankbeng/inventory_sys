@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { corsHeaders } from "@/lib/cors";
 import { prisma } from "@/lib/prisma";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "http://localhost:3001",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
 
 function parseId(id: string) {
   const parsed = Number(id);

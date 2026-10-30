@@ -117,6 +117,8 @@ export default function SalesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [warehouseStocks, setWarehouseStocks] = useState<ProductStock[]>([]);
   const [vehicleStocks, setVehicleStocks] = useState<ProductStock[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [stockLoading, setStockLoading] = useState(true);
   const [stockError, setStockError] = useState<string | null>(null);
@@ -139,7 +141,7 @@ export default function SalesPage() {
         warehouseStockResponse,
         vehicleStockResponse,
       ] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/sales-orders`),
+        fetch(`${API_BASE_URL}/api/sales-orders?page=${page}&pageSize=50`),
         fetch(`${API_BASE_URL}/api/products`),
         fetch(`${API_BASE_URL}/api/warehouses`),
         fetch(`${API_BASE_URL}/api/vehicles`),
@@ -174,7 +176,11 @@ export default function SalesPage() {
         vehicleStockResponse.json(),
       ]);
 
-      const nextSales = Array.isArray(salesData) ? salesData : [];
+      if (!Array.isArray(salesData.items) || !Number.isInteger(salesData.pagination?.totalPages)) {
+        throw new Error("Unexpected response while loading sales orders.");
+      }
+      const nextSales = salesData.items as SalesOrder[];
+      setTotalPages(salesData.pagination.totalPages);
       const nextProducts = Array.isArray(productData) ? productData : [];
       const nextWarehouses = Array.isArray(warehouseData) ? warehouseData : [];
       const nextVehicles = Array.isArray(vehicleData) ? vehicleData : [];
@@ -214,7 +220,7 @@ export default function SalesPage() {
       setLoading(false);
       setStockLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     void Promise.resolve().then(loadSalesData);
@@ -360,7 +366,11 @@ export default function SalesPage() {
         discountAmount: "0",
         lines: [buildEmptyLine()],
       });
-      await loadSalesData();
+      if (page === 1) {
+        await loadSalesData();
+      } else {
+        setPage(1);
+      }
       setMessage("Sale recorded successfully.");
     } catch (error) {
       console.error("Sale creation failed", error);
@@ -619,7 +629,8 @@ export default function SalesPage() {
             Loading sales orders...
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <>
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
               <thead className="bg-slate-100 text-slate-600">
                 <tr>
@@ -680,7 +691,31 @@ export default function SalesPage() {
                 )}
               </tbody>
             </table>
-          </div>
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
+              <span className="text-sm text-slate-500">Page {page} of {totalPages}</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page <= 1}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={page >= totalPages}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

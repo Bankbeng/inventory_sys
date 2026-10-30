@@ -1,24 +1,57 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getSessionFromRequest } from "@/lib/session";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "http://localhost:3001",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { corsHeaders } from "@/lib/cors";
 
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const orders = await prisma.salesOrder.findMany({
+    const url = new URL(request.url);
+    const pageValue = url.searchParams.get("page");
+    const pageSizeValue = url.searchParams.get("pageSize");
+    const search = url.searchParams.get("search")?.trim() ?? "";
+    const isPaginated = pageValue !== null || pageSizeValue !== null || search !== "";
+    const page = pageValue === null ? 1 : Number(pageValue);
+    const pageSize = pageSizeValue === null ? 50 : Number(pageSizeValue);
+
+    if (
+      isPaginated &&
+      (!Number.isInteger(page) || page < 1 ||
+        !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100)
+    ) {
+      return NextResponse.json(
+        { error: "page must be a positive integer and pageSize must be between 1 and 100" },
+        { status: 400, headers: corsHeaders },
+      );
+    }
+
+    const where: Prisma.SalesOrderWhereInput | undefined = search
+      ? {
+          OR: [
+            ...(Number.isInteger(Number(search)) && Number(search) > 0
+              ? [{ order_id: Number(search) }]
+              : []),
+            { customer_name: { contains: search } },
+            { salesperson: { staff_name: { contains: search } } },
+            { sourceWarehouse: { warehouse_name: { contains: search } } },
+            { sourceVehicle: { vehicle_name: { contains: search } } },
+          ],
+        }
+      : undefined;
+
+    const query: Prisma.SalesOrderFindManyArgs = {
+      ...(where ? { where } : {}),
       orderBy: [{ order_date: "desc" }, { order_id: "desc" }],
+      ...(isPaginated ? { skip: (page - 1) * pageSize, take: pageSize } : {}),
       include: {
-        salesperson: true,
+        salesperson: {
+          select: { staff_id: true, staff_name: true },
+        },
         customer: true,
         sourceVehicle: true,
         sourceWarehouse: true,
@@ -42,9 +75,26 @@ export async function GET() {
           },
         },
       },
-    });
+    };
+    const [orders, totalItems] = await Promise.all([
+      prisma.salesOrder.findMany(query),
+      isPaginated ? prisma.salesOrder.count(where ? { where } : undefined) : Promise.resolve(0),
+    ]);
 
-    return NextResponse.json(orders, { headers: corsHeaders });
+    return NextResponse.json(
+      isPaginated
+        ? {
+            items: orders,
+            pagination: {
+              page,
+              pageSize,
+              totalItems,
+              totalPages: Math.ceil(totalItems / pageSize),
+            },
+          }
+        : orders,
+      { headers: corsHeaders },
+    );
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch sales orders" },
@@ -137,8 +187,8 @@ export async function POST(request: Request) {
         throw new Error("Each item must include a valid product_id");
       }
 
-      if (!Number.isFinite(quantity) || quantity <= 0) {
-        throw new Error("Each item must include a valid quantity");
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        throw new Error("Each item must include a positive integer quantity");
       }
 
       if (!Number.isFinite(unitPrice) || unitPrice < 0) {
@@ -256,7 +306,9 @@ export async function POST(request: Request) {
       return tx.salesOrder.findUnique({
         where: { order_id: createdOrder.order_id },
         include: {
-          salesperson: true,
+          salesperson: {
+            select: { staff_id: true, staff_name: true },
+          },
           sourceVehicle: true,
           sourceWarehouse: true,
           details: {

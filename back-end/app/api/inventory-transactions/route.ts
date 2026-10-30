@@ -1,13 +1,85 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getSessionFromRequest } from "@/lib/session";
+import { corsHeaders } from "@/lib/cors";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "http://localhost:3001",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+async function addWarehouseStock(
+  tx: Prisma.TransactionClient,
+  warehouseId: number,
+  productId: number,
+  quantity: number,
+) {
+  await tx.warehouseStock.upsert({
+    where: {
+      warehouse_id_product_id: {
+        warehouse_id: warehouseId,
+        product_id: productId,
+      },
+    },
+    create: { warehouse_id: warehouseId, product_id: productId, quantity },
+    update: { quantity: { increment: quantity } },
+  });
+}
+
+async function addVehicleStock(
+  tx: Prisma.TransactionClient,
+  vehicleId: number,
+  productId: number,
+  quantity: number,
+) {
+  await tx.vehicleStock.upsert({
+    where: {
+      vehicle_id_product_id: {
+        vehicle_id: vehicleId,
+        product_id: productId,
+      },
+    },
+    create: { vehicle_id: vehicleId, product_id: productId, quantity },
+    update: { quantity: { increment: quantity } },
+  });
+}
+
+async function removeWarehouseStock(
+  tx: Prisma.TransactionClient,
+  warehouseId: number,
+  productId: number,
+  quantity: number,
+  errorMessage: string,
+) {
+  const result = await tx.warehouseStock.updateMany({
+    where: {
+      warehouse_id: warehouseId,
+      product_id: productId,
+      quantity: { gte: quantity },
+    },
+    data: { quantity: { decrement: quantity } },
+  });
+  if (result.count === 0) {
+    throw new Error(errorMessage);
+  }
+}
+
+async function removeVehicleStock(
+  tx: Prisma.TransactionClient,
+  vehicleId: number,
+  productId: number,
+  quantity: number,
+  errorMessage: string,
+) {
+  const result = await tx.vehicleStock.updateMany({
+    where: {
+      vehicle_id: vehicleId,
+      product_id: productId,
+      quantity: { gte: quantity },
+    },
+    data: { quantity: { decrement: quantity } },
+  });
+  if (result.count === 0) {
+    throw new Error(errorMessage);
+  }
+}
 
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
@@ -18,7 +90,9 @@ export async function GET() {
     const transactions = await prisma.inventoryTransaction.findMany({
       orderBy: [{ date_time: "desc" }, { transaction_id: "desc" }],
       include: {
-        staff: true,
+        staff: {
+          select: { staff_id: true, staff_name: true },
+        },
         fromWarehouse: true,
         toWarehouse: true,
         fromVehicle: true,
@@ -87,9 +161,9 @@ export async function POST(request: Request) {
       const productId = Number(item?.product_id);
       const qty = Number(item?.quantity);
 
-      if (!Number.isInteger(productId) || productId <= 0 || !Number.isFinite(qty) || qty <= 0) {
+      if (!Number.isInteger(productId) || productId <= 0 || !Number.isInteger(qty) || qty <= 0) {
         return NextResponse.json(
-          { error: "Each item must include a valid product_id and quantity." },
+          { error: "Each item must include a valid product_id and positive integer quantity." },
           { status: 400, headers: corsHeaders },
         );
       }
@@ -243,239 +317,55 @@ export async function POST(request: Request) {
       for (const { productId, quantity: qty } of items) {
         if (normalizedMovement === "in") {
           if (normalizedToLocationType === "warehouse") {
-            const existing = await tx.warehouseStock.findUnique({
-              where: {
-                warehouse_id_product_id: {
-                  warehouse_id: targetWarehouseId!,
-                  product_id: productId,
-                },
-              },
-            });
-
-            if (existing) {
-              await tx.warehouseStock.update({
-                where: {
-                  warehouse_id_product_id: {
-                    warehouse_id: targetWarehouseId!,
-                    product_id: productId,
-                  },
-                },
-                data: {
-                  quantity: existing.quantity + qty,
-                },
-              });
-            } else {
-              await tx.warehouseStock.create({
-                data: {
-                  warehouse_id: targetWarehouseId!,
-                  product_id: productId,
-                  quantity: qty,
-                },
-              });
-            }
+            await addWarehouseStock(tx, targetWarehouseId!, productId, qty);
           } else {
-            const existing = await tx.vehicleStock.findUnique({
-              where: {
-                vehicle_id_product_id: {
-                  vehicle_id: targetVehicleId!,
-                  product_id: productId,
-                },
-              },
-            });
-
-            if (existing) {
-              await tx.vehicleStock.update({
-                where: {
-                  vehicle_id_product_id: {
-                    vehicle_id: targetVehicleId!,
-                    product_id: productId,
-                  },
-                },
-                data: {
-                  quantity: existing.quantity + qty,
-                },
-              });
-            } else {
-              await tx.vehicleStock.create({
-                data: {
-                  vehicle_id: targetVehicleId!,
-                  product_id: productId,
-                  quantity: qty,
-                },
-              });
-            }
+            await addVehicleStock(tx, targetVehicleId!, productId, qty);
           }
         }
 
         if (normalizedMovement === "out") {
           if (normalizedFromLocationType === "warehouse") {
-            const existing = await tx.warehouseStock.findUnique({
-              where: {
-                warehouse_id_product_id: {
-                  warehouse_id: sourceWarehouseId!,
-                  product_id: productId,
-                },
-              },
-            });
-
-            if (!existing || existing.quantity < qty) {
-              throw new Error(`Insufficient warehouse stock for product ${productId}`);
-            }
-
-            await tx.warehouseStock.update({
-              where: {
-                warehouse_id_product_id: {
-                  warehouse_id: sourceWarehouseId!,
-                  product_id: productId,
-                },
-              },
-              data: {
-                quantity: existing.quantity - qty,
-              },
-            });
+            await removeWarehouseStock(
+              tx,
+              sourceWarehouseId!,
+              productId,
+              qty,
+              `Insufficient warehouse stock for product ${productId}`,
+            );
           } else {
-            const existing = await tx.vehicleStock.findUnique({
-              where: {
-                vehicle_id_product_id: {
-                  vehicle_id: sourceVehicleId!,
-                  product_id: productId,
-                },
-              },
-            });
-
-            if (!existing || existing.quantity < qty) {
-              throw new Error(`Insufficient vehicle stock for product ${productId}`);
-            }
-
-            await tx.vehicleStock.update({
-              where: {
-                vehicle_id_product_id: {
-                  vehicle_id: sourceVehicleId!,
-                  product_id: productId,
-                },
-              },
-              data: {
-                quantity: existing.quantity - qty,
-              },
-            });
+            await removeVehicleStock(
+              tx,
+              sourceVehicleId!,
+              productId,
+              qty,
+              `Insufficient vehicle stock for product ${productId}`,
+            );
           }
         }
 
         if (normalizedMovement === "transfer") {
           if (normalizedFromLocationType === "warehouse") {
-            const source = await tx.warehouseStock.findUnique({
-              where: {
-                warehouse_id_product_id: {
-                  warehouse_id: sourceWarehouseId!,
-                  product_id: productId,
-                },
-              },
-            });
-
-            if (!source || source.quantity < qty) {
-              throw new Error(`Insufficient warehouse stock for transfer of product ${productId}`);
-            }
-
-            await tx.warehouseStock.update({
-              where: {
-                warehouse_id_product_id: {
-                  warehouse_id: sourceWarehouseId!,
-                  product_id: productId,
-                },
-              },
-              data: {
-                quantity: source.quantity - qty,
-              },
-            });
+            await removeWarehouseStock(
+              tx,
+              sourceWarehouseId!,
+              productId,
+              qty,
+              `Insufficient warehouse stock for transfer of product ${productId}`,
+            );
           } else {
-            const source = await tx.vehicleStock.findUnique({
-              where: {
-                vehicle_id_product_id: {
-                  vehicle_id: sourceVehicleId!,
-                  product_id: productId,
-                },
-              },
-            });
-
-            if (!source || source.quantity < qty) {
-              throw new Error(`Insufficient vehicle stock for transfer of product ${productId}`);
-            }
-
-            await tx.vehicleStock.update({
-              where: {
-                vehicle_id_product_id: {
-                  vehicle_id: sourceVehicleId!,
-                  product_id: productId,
-                },
-              },
-              data: {
-                quantity: source.quantity - qty,
-              },
-            });
+            await removeVehicleStock(
+              tx,
+              sourceVehicleId!,
+              productId,
+              qty,
+              `Insufficient vehicle stock for transfer of product ${productId}`,
+            );
           }
 
           if (normalizedToLocationType === "warehouse") {
-            const destination = await tx.warehouseStock.findUnique({
-              where: {
-                warehouse_id_product_id: {
-                  warehouse_id: targetWarehouseId!,
-                  product_id: productId,
-                },
-              },
-            });
-
-            if (destination) {
-              await tx.warehouseStock.update({
-                where: {
-                  warehouse_id_product_id: {
-                    warehouse_id: targetWarehouseId!,
-                    product_id: productId,
-                  },
-                },
-                data: {
-                  quantity: destination.quantity + qty,
-                },
-              });
-            } else {
-              await tx.warehouseStock.create({
-                data: {
-                  warehouse_id: targetWarehouseId!,
-                  product_id: productId,
-                  quantity: qty,
-                },
-              });
-            }
+            await addWarehouseStock(tx, targetWarehouseId!, productId, qty);
           } else {
-            const destination = await tx.vehicleStock.findUnique({
-              where: {
-                vehicle_id_product_id: {
-                  vehicle_id: targetVehicleId!,
-                  product_id: productId,
-                },
-              },
-            });
-
-            if (destination) {
-              await tx.vehicleStock.update({
-                where: {
-                  vehicle_id_product_id: {
-                    vehicle_id: targetVehicleId!,
-                    product_id: productId,
-                  },
-                },
-                data: {
-                  quantity: destination.quantity + qty,
-                },
-              });
-            } else {
-              await tx.vehicleStock.create({
-                data: {
-                  vehicle_id: targetVehicleId!,
-                  product_id: productId,
-                  quantity: qty,
-                },
-              });
-            }
+            await addVehicleStock(tx, targetVehicleId!, productId, qty);
           }
         }
 

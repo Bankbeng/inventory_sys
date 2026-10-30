@@ -29,7 +29,9 @@ export async function GET(
     const order = await prisma.salesOrder.findUnique({
       where: { order_id: parseId(id) },
       include: {
-        salesperson: true,
+        salesperson: {
+          select: { staff_id: true, staff_name: true },
+        },
         sourceVehicle: true,
         sourceWarehouse: true,
         details: true,

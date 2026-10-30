@@ -92,6 +92,9 @@ export default function SalesManagementPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [warehouseStocks, setWarehouseStocks] = useState<ProductStock[]>([]);
   const [vehicleStocks, setVehicleStocks] = useState<ProductStock[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
@@ -112,7 +115,7 @@ export default function SalesManagementPage() {
     setError(null);
     try {
       const responses = await Promise.all([
-        fetch(`${API_BASE_URL}/api/sales-orders`),
+        fetch(`${API_BASE_URL}/api/sales-orders?page=${page}&pageSize=50&search=${encodeURIComponent(search.trim())}`),
         fetch(`${API_BASE_URL}/api/products`),
         fetch(`${API_BASE_URL}/api/customers`),
         fetch(`${API_BASE_URL}/api/warehouses`),
@@ -136,7 +139,15 @@ export default function SalesManagementPage() {
         vehicleStockData,
       ] = await Promise.all(responses.map((response) => response.json()));
 
-      setOrders(Array.isArray(orderData) ? orderData : []);
+      if (!Array.isArray(orderData.items) || !Number.isInteger(orderData.pagination?.totalPages)) {
+        throw new Error("Unexpected response while loading sales orders.");
+      }
+      setOrders(orderData.items);
+      setTotalPages(orderData.pagination.totalPages);
+      setTotalOrders(orderData.pagination.totalItems);
+      if (page > Math.max(1, orderData.pagination.totalPages)) {
+        setPage(Math.max(1, orderData.pagination.totalPages));
+      }
       setProducts(Array.isArray(productData) ? productData : []);
       setCustomers(Array.isArray(customerData) ? customerData : []);
       setWarehouses(Array.isArray(warehouseData) ? warehouseData : []);
@@ -149,11 +160,12 @@ export default function SalesManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, search]);
 
   useEffect(() => {
-    void Promise.resolve().then(loadData);
-  }, [loadData]);
+    const timer = window.setTimeout(() => void loadData(), search ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [loadData, search]);
 
   const customerOptions = useMemo(
     () => customers.map((customer) => ({
@@ -180,16 +192,7 @@ export default function SalesManagementPage() {
     0,
     subtotal - (Number.isFinite(discountValue) ? discountValue : 0),
   );
-  const filteredOrders = orders.filter((order) => {
-    const query = search.trim().toLocaleLowerCase();
-    if (!query) return true;
-    return [
-      String(order.order_id),
-      order.customer_name,
-      order.salesperson?.staff_name ?? "",
-      order.sourceWarehouse?.warehouse_name ?? order.sourceVehicle?.vehicle_name ?? "",
-    ].some((value) => value.toLocaleLowerCase().includes(query));
-  });
+  const filteredOrders = orders;
 
   function startEditing(order: SalesOrder) {
     setEditingOrderId(order.order_id);
@@ -546,13 +549,16 @@ export default function SalesManagementPage() {
           <div className="flex flex-wrap items-end justify-between gap-3 p-4">
             <div>
               <h2 className="text-lg font-semibold">Sales orders</h2>
-              <p className="text-sm text-slate-500">{filteredOrders.length} order(s)</p>
+              <p className="text-sm text-slate-500">{totalOrders} order(s)</p>
             </div>
             <label className="text-sm text-slate-700">
               <span className="mb-2 block">Search orders</span>
               <input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
                 placeholder="Order, customer, salesperson, source"
                 className="w-72 max-w-full rounded-xl border border-slate-300 px-3 py-2.5"
               />
@@ -629,6 +635,29 @@ export default function SalesManagementPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+          {!loading && totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
+              <span className="text-sm text-slate-500">Page {page} of {totalPages}</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page <= 1}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={page >= totalPages}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </section>

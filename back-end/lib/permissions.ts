@@ -104,5 +104,8 @@ export function pagesForApi(path: string, method: string): string[] | null {
   if (path.startsWith("/api/inventory-transactions")) {
     return ["/transactions", "/stock"];
   }
+  if (path === "/api/history") {
+    return ["/transactions"];
+  }
   return null;
 }

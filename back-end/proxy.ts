@@ -1,15 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { corsHeaders } from "@/lib/cors";
 import { getCurrentStaff, isAdminRole, pagesForApi } from "@/lib/permissions";
 import { canAccessPage } from "@/lib/permissions";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
-
-const allowedOrigin = "http://localhost:3001";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": allowedOrigin,
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Credentials": "true",
-};
 
 export async function proxy(request: NextRequest) {
   if (request.method === "OPTIONS") {

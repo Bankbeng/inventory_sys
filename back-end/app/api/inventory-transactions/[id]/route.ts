@@ -21,7 +21,9 @@ export async function GET(
     const transaction = await prisma.inventoryTransaction.findUnique({
       where: { transaction_id: parseId(id) },
       include: {
-        staff: true,
+        staff: {
+          select: { staff_id: true, staff_name: true },
+        },
         fromWarehouse: true,
         toWarehouse: true,
         fromVehicle: true,
