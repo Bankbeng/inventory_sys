@@ -50,6 +50,7 @@ type SalesOrder = {
   customer_id: number | null;
   customer_name: string;
   discount_amount: number;
+  tax_rate: number;
   total_amount: number;
   is_paid: boolean;
   order_date: string;
@@ -72,6 +73,7 @@ type SaleForm = {
   sourceType: "warehouse" | "vehicle";
   sourceId: string;
   discountAmount: string;
+  includeTax: boolean;
   lines: SaleLine[];
 };
 
@@ -104,6 +106,7 @@ export default function SalesManagementPage() {
     sourceType: "warehouse",
     sourceId: "",
     discountAmount: "0",
+    includeTax: false,
     lines: [emptyLine()],
   });
   const [search, setSearch] = useState("");
@@ -188,10 +191,9 @@ export default function SalesManagementPage() {
     0,
   );
   const discountValue = Number(form.discountAmount);
-  const total = Math.max(
-    0,
-    subtotal - (Number.isFinite(discountValue) ? discountValue : 0),
-  );
+  const taxableAmount = Math.max(0, subtotal - (Number.isFinite(discountValue) ? discountValue : 0));
+  const taxAmount = form.includeTax ? Math.round((taxableAmount * 0.1 + Number.EPSILON) * 100) / 100 : 0;
+  const total = taxableAmount + taxAmount;
   const filteredOrders = orders;
 
   function startEditing(order: SalesOrder) {
@@ -201,6 +203,7 @@ export default function SalesManagementPage() {
       sourceType: order.source_vehicle_id !== null ? "vehicle" : "warehouse",
       sourceId: String(order.source_vehicle_id ?? order.source_warehouse_id ?? ""),
       discountAmount: String(order.discount_amount ?? 0),
+      includeTax: Number(order.tax_rate) > 0,
       lines: order.details.map((detail) => ({
         productId: String(detail.product_id),
         quantity: String(detail.quantity_sold),
@@ -219,6 +222,7 @@ export default function SalesManagementPage() {
       sourceType: "warehouse",
       sourceId: "",
       discountAmount: "0",
+      includeTax: false,
       lines: [emptyLine()],
     });
     setMessage(null);
@@ -270,6 +274,7 @@ export default function SalesManagementPage() {
           source_warehouse_id: form.sourceType === "warehouse" ? Number(form.sourceId) : null,
           source_vehicle_id: form.sourceType === "vehicle" ? Number(form.sourceId) : null,
           discount_amount: discountValue,
+          include_tax: form.includeTax,
           total_amount: total,
           items: form.lines.map((line) => ({
             product_id: Number(line.productId),
@@ -526,10 +531,25 @@ export default function SalesManagementPage() {
                     className="w-full rounded-xl border border-slate-300 px-3 py-2.5"
                   />
                 </label>
-                <div className="text-right">
-                  <p className="text-sm text-slate-500">Subtotal: {formatCurrency(subtotal)}</p>
-                  <p className="text-sm text-slate-500">Discount: {formatCurrency(Number.isFinite(discountValue) ? discountValue : 0)}</p>
-                  <p className="text-lg font-bold text-cyan-700">Order total: {formatCurrency(total)}</p>
+                <div className="flex flex-col gap-3 sm:items-end">
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={form.includeTax}
+                      onChange={(event) => setForm((current) => ({
+                        ...current,
+                        includeTax: event.target.checked,
+                      }))}
+                      className="size-4 accent-cyan-700"
+                    />
+                    Add 10% tax
+                  </label>
+                  <div className="text-right">
+                    <p className="text-sm text-slate-500">Subtotal: {formatCurrency(subtotal)}</p>
+                    <p className="text-sm text-slate-500">Discount: {formatCurrency(Number.isFinite(discountValue) ? discountValue : 0)}</p>
+                    {form.includeTax && <p className="text-sm text-slate-500">Tax (10%): {formatCurrency(taxAmount)}</p>}
+                    <p className="text-lg font-bold text-cyan-700">Order total: {formatCurrency(total)}</p>
+                  </div>
                 </div>
               </div>
             </div>

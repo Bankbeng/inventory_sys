@@ -132,6 +132,7 @@ export async function POST(request: Request) {
       ? null
       : Number(body.source_warehouse_id);
     const isPaid = body.is_paid === undefined ? true : body.is_paid;
+    const includeTax = body.include_tax === undefined ? false : body.include_tax;
 
     if (customerId !== null && (!Number.isInteger(customerId) || customerId <= 0)) {
       return NextResponse.json(
@@ -160,6 +161,13 @@ export async function POST(request: Request) {
     if (typeof isPaid !== "boolean") {
       return NextResponse.json(
         { error: "is_paid must be a boolean" },
+        { status: 400, headers: corsHeaders },
+      );
+    }
+
+    if (typeof includeTax !== "boolean") {
+      return NextResponse.json(
+        { error: "include_tax must be a boolean" },
         { status: 400, headers: corsHeaders },
       );
     }
@@ -215,9 +223,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const totalAmount = body.discount_amount === undefined
-      ? Number(body.total_amount ?? itemSubtotal)
-      : itemSubtotal - discountAmount;
+    const taxRate = includeTax ? 0.1 : 0;
+    const discountedSubtotal = itemSubtotal - discountAmount;
+    const totalBeforeTax = body.discount_amount === undefined
+      ? Number(body.total_amount ?? discountedSubtotal)
+      : discountedSubtotal;
+    const taxAmount = Math.round((totalBeforeTax * taxRate + Number.EPSILON) * 100) / 100;
+    const totalAmount = totalBeforeTax + taxAmount;
 
     if (!Number.isFinite(totalAmount) || totalAmount < 0) {
       return NextResponse.json(
@@ -277,6 +289,7 @@ export async function POST(request: Request) {
           source_vehicle_id: sourceVehicleId,
           source_warehouse_id: sourceWarehouseId,
           discount_amount: discountAmount,
+          tax_rate: taxRate,
           total_amount: totalAmount,
           is_paid: isPaid,
         },

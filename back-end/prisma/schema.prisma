@@ -154,6 +154,7 @@ model SalesOrder {
   source_vehicle_id   Int?
   source_warehouse_id Int?
   discount_amount     Float    @default(0)
+  tax_rate            Float    @default(0)
   total_amount        Float
   is_paid             Boolean  @default(true)
 

@@ -52,6 +52,7 @@ type SalesOrder = {
   customer_name?: string;
   customer?: Pick<Customer, "customer_name" | "phone_number" | "place_link"> | null;
   discount_amount: number;
+  tax_rate: number;
   total_amount: number;
   is_paid: boolean;
   order_date: string;
@@ -73,6 +74,7 @@ type SaleForm = {
   sourceType: "warehouse" | "vehicle";
   sourceId: string;
   discountAmount: string;
+  includeTax: boolean;
   lines: SaleLine[];
 };
 
@@ -88,6 +90,7 @@ const initialForm: SaleForm = {
   sourceType: "warehouse",
   sourceId: "",
   discountAmount: "0",
+  includeTax: false,
   lines: [buildEmptyLine()],
 };
 
@@ -255,16 +258,19 @@ export default function SalesPage() {
     [form.lines],
   );
   const discountValue = Number(form.discountAmount);
-  const orderTotal = Math.max(
-    0,
-    totalValue - (Number.isFinite(discountValue) ? discountValue : 0),
-  );
+  const taxableAmount = Math.max(0, totalValue - (Number.isFinite(discountValue) ? discountValue : 0));
+  const taxAmount = form.includeTax ? Math.round((taxableAmount * 0.1 + Number.EPSILON) * 100) / 100 : 0;
+  const orderTotal = taxableAmount + taxAmount;
 
   const invoiceDetails = invoiceOrder?.details ?? [];
   const invoiceSubtotal = invoiceDetails.reduce(
     (sum, detail) => sum + Number(detail.quantity_sold) * Number(detail.sold_at_price),
     0,
   );
+  const invoiceTaxableAmount = Math.max(0, invoiceSubtotal - Number(invoiceOrder?.discount_amount || 0));
+  const invoiceTaxAmount = Math.round(
+    (invoiceTaxableAmount * Number(invoiceOrder?.tax_rate || 0) + Number.EPSILON) * 100,
+  ) / 100;
   const invoiceQuantity = invoiceDetails.reduce((sum, detail) => sum + Number(detail.quantity_sold), 0);
 
   const addLine = () => {
@@ -338,6 +344,7 @@ export default function SalesPage() {
         source_warehouse_id: form.sourceType === "warehouse" ? Number(form.sourceId) : null,
         source_vehicle_id: form.sourceType === "vehicle" ? Number(form.sourceId) : null,
         discount_amount: discountValue,
+        include_tax: form.includeTax,
         total_amount: orderTotal,
         items: validLines.map((line) => ({
           product_id: Number(line.productId),
@@ -364,6 +371,7 @@ export default function SalesPage() {
         sourceType: "warehouse",
         sourceId: warehouses[0] ? String(warehouses[0].warehouse_id) : "",
         discountAmount: "0",
+        includeTax: false,
         lines: [buildEmptyLine()],
       });
       if (page === 1) {
@@ -602,11 +610,26 @@ export default function SalesPage() {
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
                 />
               </label>
-              <div className="text-right">
-                <p className="text-sm text-slate-500">Subtotal: {formatCurrency(totalValue)}</p>
-                <p className="text-sm text-slate-500">Discount: {formatCurrency(Number.isFinite(discountValue) ? discountValue : 0)}</p>
-                <p className="text-sm text-slate-500">Order total</p>
-                <p className="text-2xl font-bold text-cyan-700">{formatCurrency(orderTotal)}</p>
+              <div className="flex flex-col gap-3 sm:items-end">
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={form.includeTax}
+                    onChange={(event) => setForm((current) => ({
+                      ...current,
+                      includeTax: event.target.checked,
+                    }))}
+                    className="size-4 accent-cyan-600"
+                  />
+                  Add 10% tax
+                </label>
+                <div className="text-right">
+                  <p className="text-sm text-slate-500">Subtotal: {formatCurrency(totalValue)}</p>
+                  <p className="text-sm text-slate-500">Discount: {formatCurrency(Number.isFinite(discountValue) ? discountValue : 0)}</p>
+                  {form.includeTax && <p className="text-sm text-slate-500">Tax (10%): {formatCurrency(taxAmount)}</p>}
+                  <p className="text-sm text-slate-500">Order total</p>
+                  <p className="text-2xl font-bold text-cyan-700">{formatCurrency(orderTotal)}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -846,6 +869,12 @@ export default function SalesPage() {
                     <dt>Discount</dt>
                     <dd>-{formatCurrency(Number(invoiceOrder.discount_amount || 0))}</dd>
                   </div>
+                  {Number(invoiceOrder.tax_rate || 0) > 0 && (
+                    <div>
+                      <dt>Tax (10%)</dt>
+                      <dd>{formatCurrency(invoiceTaxAmount)}</dd>
+                    </div>
+                  )}
                   <div className="invoice-grand-total">
                     <dt>Grand total</dt>
                     <dd>{formatCurrency(Number(invoiceOrder.total_amount || 0))}</dd>

@@ -74,6 +74,9 @@ export async function PATCH(
     if (body.is_paid !== undefined && typeof body.is_paid !== "boolean") {
       return NextResponse.json({ error: "is_paid must be a boolean" }, { status: 400 });
     }
+    if (body.include_tax !== undefined && typeof body.include_tax !== "boolean") {
+      return NextResponse.json({ error: "include_tax must be a boolean" }, { status: 400 });
+    }
 
     const orderId = parseId(id);
     const order = await prisma.$transaction(async (tx) => {
@@ -150,8 +153,15 @@ export async function PATCH(
         throw new Error("discount_amount must be between 0 and the item subtotal");
       }
 
-      const nextTotal: number = body.items !== undefined || body.discount_amount !== undefined
-        ? itemSubtotal - nextDiscount
+      const nextTaxRate = body.include_tax === undefined
+        ? currentOrder.tax_rate
+        : body.include_tax ? 0.1 : 0;
+      const nextTaxableAmount = itemSubtotal - nextDiscount;
+      const nextTaxAmount = Math.round((nextTaxableAmount * nextTaxRate + Number.EPSILON) * 100) / 100;
+      const nextTotal: number = body.items !== undefined ||
+        body.discount_amount !== undefined ||
+        body.include_tax !== undefined
+        ? nextTaxableAmount + nextTaxAmount
         : Number(body.total_amount ?? currentOrder.total_amount);
 
       if (!Number.isFinite(nextTotal) || nextTotal < 0) {
@@ -305,6 +315,7 @@ export async function PATCH(
           source_vehicle_id: nextSourceVehicleId,
           source_warehouse_id: nextSourceWarehouseId,
           discount_amount: nextDiscount,
+          tax_rate: nextTaxRate,
           total_amount: nextTotal,
         },
       });
