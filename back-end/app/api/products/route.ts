@@ -25,7 +25,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { product_name, category, type, size, unit, cost_price, retail_price } = body;
+    const { product_name, category, type, size, unit, retail_price } = body;
 
     if (
       typeof product_name !== "string" ||
@@ -34,11 +34,10 @@ export async function POST(request: Request) {
       !category.trim() ||
       typeof unit !== "string" ||
       !unit.trim() ||
-      cost_price === undefined ||
       retail_price === undefined
     ) {
       return NextResponse.json(
-        { error: "product_name, category, unit, cost_price and retail_price are required" },
+        { error: "product_name, category, unit and retail_price are required" },
         { status: 400, headers: corsHeaders },
       );
     }
@@ -50,7 +49,6 @@ export async function POST(request: Request) {
         type: typeof type === "string" ? type.trim() : "",
         size: typeof size === "string" ? size.trim() : "",
         unit: unit.trim(),
-        cost_price: Number(cost_price),
         retail_price: Number(retail_price),
       },
     });

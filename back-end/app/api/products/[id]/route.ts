@@ -56,7 +56,6 @@ export async function PATCH(
         ...(body.type !== undefined ? { type: String(body.type) } : {}),
         ...(body.size !== undefined ? { size: String(body.size) } : {}),
         ...(body.unit !== undefined ? { unit: String(body.unit) } : {}),
-        ...(body.cost_price !== undefined ? { cost_price: Number(body.cost_price) } : {}),
         ...(body.retail_price !== undefined ? { retail_price: Number(body.retail_price) } : {}),
       },
     });

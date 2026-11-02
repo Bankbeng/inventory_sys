@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/currency";
 
 type Stock = {
   quantity: number;
-  product?: { cost_price: number; retail_price: number };
+  product?: { retail_price: number };
 };
 
 type SalesOrder = {
@@ -137,13 +137,11 @@ export default function DashboardPage() {
       : startDate > endDate
         ? "Start date must be on or before end date."
         : "Sales within the selected date range";
-  const inventoryValue = (stocks: Stock[], price: "cost_price" | "retail_price") =>
-    stocks.reduce((total, stock) => total + (stock.quantity ?? 0) * (stock.product?.[price] ?? 0), 0);
+  const inventoryValue = (stocks: Stock[]) =>
+    stocks.reduce((total, stock) => total + (stock.quantity ?? 0) * (stock.product?.retail_price ?? 0), 0);
 
-  const warehouseCost = inventoryValue(warehouseStocks, "cost_price");
-  const vehicleCost = inventoryValue(vehicleStocks, "cost_price");
-  const warehouseRetail = inventoryValue(warehouseStocks, "retail_price");
-  const vehicleRetail = inventoryValue(vehicleStocks, "retail_price");
+  const warehouseRetail = inventoryValue(warehouseStocks);
+  const vehicleRetail = inventoryValue(vehicleStocks);
 
   return (
     <main className="min-h-screen bg-[#f4f6f3] px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
@@ -294,10 +292,9 @@ export default function DashboardPage() {
             <section aria-labelledby="inventory-value-heading" className="border-t border-slate-300 pt-7 pb-10">
               <div className="mb-5">
                 <p className="text-xs font-semibold tracking-[0.16em] text-teal-700 uppercase">Current stock</p>
-                <h2 id="inventory-value-heading" className="mt-1 text-xl font-semibold text-slate-950">Inventory value by price</h2>
+                <h2 id="inventory-value-heading" className="mt-1 text-xl font-semibold text-slate-950">Inventory value</h2>
               </div>
-              <div className="grid gap-8 md:grid-cols-2">
-                <ValueSummary title="Cost price" warehouseValue={warehouseCost} vehicleValue={vehicleCost} />
+              <div className="grid gap-8 md:grid-cols-1">
                 <ValueSummary title="Retail price" warehouseValue={warehouseRetail} vehicleValue={vehicleRetail} />
               </div>
             </section>

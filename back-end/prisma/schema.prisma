@@ -52,7 +52,6 @@ model Product {
   type         String @default("")
   size         String @default("")
   unit         String @default("")
-  cost_price   Float
   retail_price Float
 
   warehouseStocks    WarehouseStock[]

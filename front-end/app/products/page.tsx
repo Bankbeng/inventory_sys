@@ -11,7 +11,6 @@ type Product = {
   type: string;
   size: string;
   unit: string;
-  cost_price: number;
   retail_price: number;
 };
 
@@ -21,7 +20,6 @@ type ProductFormState = {
   type: string;
   size: string;
   unit: string;
-  cost_price: string;
   retail_price: string;
 };
 
@@ -31,7 +29,6 @@ const emptyForm: ProductFormState = {
   type: "",
   size: "",
   unit: "",
-  cost_price: "",
   retail_price: "",
 };
 
@@ -101,11 +98,6 @@ export default function ProductsPage() {
       return;
     }
 
-    if (!Number(form.cost_price) && form.cost_price.trim() !== "0") {
-      setMessage("Cost price must be a valid number.");
-      return;
-    }
-
     if (!Number(form.retail_price) && form.retail_price.trim() !== "0") {
       setMessage("Retail price must be a valid number.");
       return;
@@ -121,7 +113,6 @@ export default function ProductsPage() {
         type: form.type.trim(),
         size: form.size.trim(),
         unit: form.unit.trim(),
-        cost_price: Number(form.cost_price),
         retail_price: Number(form.retail_price),
       };
 
@@ -183,7 +174,6 @@ export default function ProductsPage() {
       type: product.type,
       size: product.size,
       unit: product.unit,
-      cost_price: String(product.cost_price),
       retail_price: String(product.retail_price),
     });
     setMessage(null);
@@ -254,20 +244,7 @@ export default function ProductsPage() {
               />
             </label>
 
-            <label className="text-sm text-slate-700">
-              <span className="mb-2 block">Cost price</span>
-              <input
-                required
-                type="number"
-                step="0.01"
-                value={form.cost_price}
-                onChange={(event) => handleChange("cost_price", event.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
-                placeholder="35.00"
-              />
-            </label>
-
-            <label className="text-sm text-slate-700">
+            <label className="text-sm text-slate-700 md:col-span-2 xl:col-span-1">
               <span className="mb-2 block">Retail price</span>
               <input
                 required
@@ -347,7 +324,6 @@ export default function ProductsPage() {
                 <div className="mt-5 space-y-2 text-sm text-slate-600">
                   <p>Type: <span className="font-medium text-slate-900">{product.type}</span></p>
                   <p>Size: <span className="font-medium text-slate-900">{product.size} {product.unit}</span></p>
-                  <p>Cost: <span className="font-medium text-slate-900">{formatCurrency(Number(product.cost_price))}</span></p>
                   <p>Retail: <span className="font-medium text-cyan-700">{formatCurrency(Number(product.retail_price))}</span></p>
                 </div>
                 <div className="mt-5 flex gap-2">
