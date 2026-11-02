@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
 import { formatDate } from "@/lib/date";
+import { formatSalesOrderNumber } from "@/lib/order-number";
 import SearchableSelect from "../components/SearchableSelect";
 
 type Product = {
@@ -47,6 +48,7 @@ type SaleDetail = {
 
 type SalesOrder = {
   order_id: number;
+  order_number: number;
   customer_id: number | null;
   customer_name: string;
   discount_amount: number;
@@ -241,6 +243,11 @@ export default function SalesManagementPage() {
     event.preventDefault();
     const orderId = editingOrderId;
     if (orderId === null) return;
+    const currentOrder = orders.find((order) => order.order_id === orderId);
+    if (!currentOrder) {
+      setError("The order being edited could not be found.");
+      return;
+    }
 
     if (!form.customerId || !form.sourceId) {
       setError("Select a customer and source location.");
@@ -289,7 +296,7 @@ export default function SalesManagementPage() {
       }
       cancelEditing();
       await loadData();
-      setMessage(`Order SO-${orderId} updated successfully.`);
+      setMessage(`Order ${formatSalesOrderNumber(currentOrder.order_number)} updated successfully.`);
     } catch (saveError) {
       console.error("Failed to update sales order", saveError);
       setError(saveError instanceof Error ? saveError.message : "Failed to update sales order.");
@@ -300,7 +307,7 @@ export default function SalesManagementPage() {
 
   async function deleteOrder(order: SalesOrder) {
     if (!window.confirm(
-      `Delete order SO-${order.order_id}? Its items will be returned to stock and its payment history will be removed.`,
+      `Delete order ${formatSalesOrderNumber(order.order_number)}? Its items will be returned to stock and its payment history will be removed.`,
     )) {
       return;
     }
@@ -320,7 +327,7 @@ export default function SalesManagementPage() {
         cancelEditing();
       }
       await loadData();
-      setMessage(`Order SO-${order.order_id} deleted and stock returned.`);
+      setMessage(`Order ${formatSalesOrderNumber(order.order_number)} deleted and stock returned.`);
     } catch (deleteError) {
       console.error("Failed to delete sales order", deleteError);
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete sales order.");
@@ -328,6 +335,8 @@ export default function SalesManagementPage() {
       setDeletingOrderId(null);
     }
   }
+
+  const editingOrder = orders.find((order) => order.order_id === editingOrderId);
 
   return (
     <main className="min-h-screen bg-white px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
@@ -341,14 +350,16 @@ export default function SalesManagementPage() {
         {error && <p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
         {message && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
 
-        {editingOrderId !== null && (
+        {editingOrderId !== null && editingOrder && (
           <form
             id="order-editor"
             onSubmit={saveOrder}
             className="mb-6 scroll-mt-24 rounded-2xl border border-cyan-200 bg-cyan-50/40 p-5 shadow-sm"
           >
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Edit order SO-{editingOrderId}</h2>
+              <h2 className="text-lg font-semibold">
+                Edit order {formatSalesOrderNumber(editingOrder.order_number)}
+              </h2>
               <button
                 type="button"
                 onClick={cancelEditing}
@@ -606,7 +617,7 @@ export default function SalesManagementPage() {
                 <tbody className="divide-y divide-slate-200">
                   {filteredOrders.length > 0 ? filteredOrders.map((order) => (
                     <tr key={order.order_id} className="hover:bg-slate-50">
-                      <td className="whitespace-nowrap px-4 py-3 font-medium">SO-{order.order_id}</td>
+                      <td className="whitespace-nowrap px-4 py-3 font-medium">{formatSalesOrderNumber(order.order_number)}</td>
                       <td className="px-4 py-3">{order.customer_name || "Walk-in Customer"}</td>
                       <td className="px-4 py-3">{order.salesperson?.staff_name ?? "Unknown"}</td>
                       <td className="px-4 py-3">{order.sourceWarehouse?.warehouse_name ?? order.sourceVehicle?.vehicle_name ?? "Unknown"}</td>

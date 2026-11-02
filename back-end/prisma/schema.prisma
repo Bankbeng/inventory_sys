@@ -146,6 +146,7 @@ model TransactionDetail {
 
 model SalesOrder {
   order_id            Int      @id @default(autoincrement())
+  order_number        Int      @unique
   customer_name       String   @default("Walk-in Customer")
   customer_id         Int?
   order_date          DateTime @default(now())
@@ -167,6 +168,13 @@ model SalesOrder {
 
   @@index([order_date, order_id])
   @@map("SALES_ORDER")
+}
+
+model SalesOrderNumberSequence {
+  sequence_id Int @id
+  next_number Int
+
+  @@map("SALES_ORDER_NUMBER_SEQUENCE")
 }
 
 model InventoryTransactionAcknowledgement {

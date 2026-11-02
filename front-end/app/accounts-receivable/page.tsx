@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
 import { formatDate, formatDateTime } from "@/lib/date";
+import { formatSalesOrderNumber } from "@/lib/order-number";
 
 type Receivable = {
   order_id: number;
+  order_number: number;
   customer_name: string;
   discount_amount: number;
   total_amount: number;
@@ -328,7 +330,7 @@ export default function AccountsReceivablePage() {
                         <article key={order.order_id} className="border-t border-slate-200 p-4">
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                              <h4 className="font-semibold text-slate-900">SO-{order.order_id} · {order.customer_name}</h4>
+                              <h4 className="font-semibold text-slate-900">{formatSalesOrderNumber(order.order_number)} · {order.customer_name}</h4>
                               <p className="mt-1 text-xs text-slate-600">
                                 Salesperson: {order.salesperson?.staff_name ?? "Unknown"} ·
                                 {" "}Order date: {formatDate(order.order_date)} ·
@@ -456,7 +458,7 @@ export default function AccountsReceivablePage() {
                 <tbody className="divide-y divide-slate-200">
                   {visibleOrders.map((order) => (
                     <tr key={order.order_id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-900">SO-{order.order_id}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{formatSalesOrderNumber(order.order_number)}</td>
                       <td className="px-4 py-3 text-slate-600">{order.customer_name}</td>
                       <td className="px-4 py-3 text-slate-600">{order.salesperson?.staff_name ?? "Unknown"}</td>
                       <td className="px-4 py-3 text-slate-600">{formatDate(order.order_date)}</td>
@@ -489,7 +491,7 @@ export default function AccountsReceivablePage() {
                         {getOutstanding(order) > 0.000001 ? (
                           <div className="flex min-w-40 flex-col gap-2">
                             <input
-                              aria-label={`Payment amount for order SO-${order.order_id}`}
+                              aria-label={`Payment amount for order ${formatSalesOrderNumber(order.order_number)}`}
                               type="number"
                               min="0.01"
                               max={getOutstanding(order)}
@@ -505,7 +507,7 @@ export default function AccountsReceivablePage() {
                               className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
                             />
                             <input
-                              aria-label={`Payment note for order SO-${order.order_id}`}
+                              aria-label={`Payment note for order ${formatSalesOrderNumber(order.order_number)}`}
                               type="text"
                               maxLength={191}
                               value={paymentNotes[order.order_id] ?? ""}

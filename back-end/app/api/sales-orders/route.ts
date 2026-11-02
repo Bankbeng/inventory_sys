@@ -18,6 +18,7 @@ export async function GET(request: Request) {
     const isPaginated = pageValue !== null || pageSizeValue !== null || search !== "";
     const page = pageValue === null ? 1 : Number(pageValue);
     const pageSize = pageSizeValue === null ? 50 : Number(pageSizeValue);
+    const orderNumberSearch = search.replace(/^SO-/i, "").trim();
 
     if (
       isPaginated &&
@@ -35,6 +36,9 @@ export async function GET(request: Request) {
           OR: [
             ...(Number.isInteger(Number(search)) && Number(search) > 0
               ? [{ order_id: Number(search) }]
+              : []),
+            ...(Number.isInteger(Number(orderNumberSearch)) && Number(orderNumberSearch) > 0
+              ? [{ order_number: Number(orderNumberSearch) }]
               : []),
             { customer_name: { contains: search } },
             { salesperson: { staff_name: { contains: search } } },
@@ -281,8 +285,24 @@ export async function POST(request: Request) {
         }
       }
 
+      const [numberSequence] = await tx.$queryRaw<{ next_number: number }[]>`
+        SELECT next_number
+        FROM SALES_ORDER_NUMBER_SEQUENCE
+        WHERE sequence_id = 1
+        FOR UPDATE
+      `;
+      if (!numberSequence) {
+        throw new Error("Sales order number sequence is not configured");
+      }
+
+      await tx.salesOrderNumberSequence.update({
+        where: { sequence_id: 1 },
+        data: { next_number: { increment: 1 } },
+      });
+
       const createdOrder = await tx.salesOrder.create({
         data: {
+          order_number: numberSequence.next_number,
           customer_name: customerName,
           customer_id: customer?.customer_id ?? null,
           salesperson_id: salespersonId,

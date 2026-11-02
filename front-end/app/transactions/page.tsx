@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
 import { formatDateTime as formatDateTimeValue } from "@/lib/date";
+import { formatSalesOrderNumber } from "@/lib/order-number";
 
 type TransactionDetail = {
   transaction_id: number;
@@ -37,6 +38,7 @@ type Transaction = {
 
 type SalesOrder = {
   order_id: number;
+  order_number: number;
   customer_name: string;
   order_date: string;
   discount_amount: number;
@@ -253,7 +255,7 @@ export default function TransactionsPage() {
   const getSaleDescription = (order: SalesOrder): string => {
     const salesperson = order.salesperson?.staff_name ?? "ບໍ່ຮູ້ຈັກຜູ້ຂາຍ";
     const source = order.sourceWarehouse?.warehouse_name ?? order.sourceVehicle?.vehicle_name;
-    return `${salesperson} ບັນທຶກການຂາຍ SO-${order.order_id} ໃຫ້ລູກຄ້າ ${order.customer_name}${source ? ` ຈາກ${source}` : ""}`;
+    return `${salesperson} ບັນທຶກການຂາຍ ${formatSalesOrderNumber(order.order_number)} ໃຫ້ລູກຄ້າ ${order.customer_name}${source ? ` ຈາກ${source}` : ""}`;
   };
 
   const formatDateTime = (dateString: string): string => {

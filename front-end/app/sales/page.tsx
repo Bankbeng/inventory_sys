@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
 import { formatDate } from "@/lib/date";
+import { formatSalesOrderNumber } from "@/lib/order-number";
 import BrandMark from "../components/BrandMark";
 import SearchableSelect from "../components/SearchableSelect";
 
@@ -49,6 +50,7 @@ type OrderDetail = {
 
 type SalesOrder = {
   order_id: number;
+  order_number: number;
   customer_name?: string;
   customer?: Pick<Customer, "customer_name" | "phone_number" | "place_link"> | null;
   discount_amount: number;
@@ -678,7 +680,7 @@ export default function SalesPage() {
 
                     return (
                       <tr key={item.order_id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-medium text-slate-900">SO-{item.order_id}</td>
+                        <td className="px-4 py-3 font-medium text-slate-900">{formatSalesOrderNumber(item.order_number)}</td>
                         <td className="px-4 py-3 text-slate-600">{item.customer_name ?? "Walk-in Customer"}</td>
                         <td className="px-4 py-3 text-slate-600">{item.salesperson?.staff_name ?? "Unknown"}</td>
                         <td className="px-4 py-3 text-slate-600">{sourceName}</td>
@@ -794,7 +796,7 @@ export default function SalesPage() {
                   </div>
                   <div>
                     <dt>Refer No.</dt>
-                    <dd>SO-{invoiceOrder.order_id}</dd>
+                    <dd>{formatSalesOrderNumber(invoiceOrder.order_number)}</dd>
                   </div>
                   <div>
                     <dt>Date</dt>
