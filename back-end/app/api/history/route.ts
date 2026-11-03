@@ -11,6 +11,10 @@ export async function GET(request: Request) {
   const page = Number(url.searchParams.get("page") ?? 1);
   const pageSize = Number(url.searchParams.get("pageSize") ?? 50);
   const filterType = url.searchParams.get("type") ?? "all";
+  const dateFromValue = url.searchParams.get("dateFrom");
+  const dateToValue = url.searchParams.get("dateTo");
+  const timezoneOffsetFromValue = url.searchParams.get("timezoneOffsetFrom");
+  const timezoneOffsetToValue = url.searchParams.get("timezoneOffsetTo");
 
   if (
     !Number.isInteger(page) ||
@@ -26,12 +30,50 @@ export async function GET(request: Request) {
     );
   }
 
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  const getDateStartUtc = (date: string | null) => {
+    if (date === null || !datePattern.test(date)) return null;
+    const timestamp = Date.parse(`${date}T00:00:00.000Z`);
+    return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === date
+      ? timestamp
+      : null;
+  };
+  const dateFromStartUtc = getDateStartUtc(dateFromValue);
+  const dateToStartUtc = getDateStartUtc(dateToValue);
+  const timezoneOffsetFrom = timezoneOffsetFromValue === null ? 0 : Number(timezoneOffsetFromValue);
+  const timezoneOffsetTo = timezoneOffsetToValue === null ? 0 : Number(timezoneOffsetToValue);
+
+  if (
+    (dateFromValue !== null && dateFromStartUtc === null) ||
+    (dateToValue !== null && dateToStartUtc === null) ||
+    (dateFromValue !== null && dateToValue !== null && dateFromValue > dateToValue) ||
+    (dateFromValue !== null && (!Number.isInteger(timezoneOffsetFrom) ||
+      timezoneOffsetFrom < -840 || timezoneOffsetFrom > 840)) ||
+    (dateToValue !== null && (!Number.isInteger(timezoneOffsetTo) ||
+      timezoneOffsetTo < -840 || timezoneOffsetTo > 840))
+  ) {
+    return NextResponse.json(
+      { error: "dateFrom and dateTo must be valid YYYY-MM-DD dates in order, with timezone offsets between -840 and 840" },
+      { status: 400, headers: corsHeaders },
+    );
+  }
+
   try {
     const filter = filterType === "all"
       ? Prisma.sql`1 = 1`
       : filterType === "SALE"
         ? Prisma.sql`kind = 'sale'`
         : Prisma.sql`kind = 'inventory' AND movement_type = ${filterType}`;
+    const dateFilter = dateFromStartUtc !== null && dateToStartUtc !== null
+      ? Prisma.sql`occurred_at >= ${new Date(dateFromStartUtc + timezoneOffsetFrom * 60_000)} AND occurred_at < ${new Date(dateToStartUtc + (timezoneOffsetTo + 24 * 60) * 60_000)}`
+      : dateFromStartUtc !== null
+        ? Prisma.sql`occurred_at >= ${new Date(dateFromStartUtc + timezoneOffsetFrom * 60_000)}`
+        : dateToStartUtc !== null
+          ? Prisma.sql`occurred_at < ${new Date(dateToStartUtc + (timezoneOffsetTo + 24 * 60) * 60_000)}`
+          : null;
+    const whereFilter = dateFilter === null
+      ? filter
+      : Prisma.sql`(${filter}) AND (${dateFilter})`;
     const historyQuery = Prisma.sql`
       SELECT kind, record_id
       FROM (
@@ -43,20 +85,20 @@ export async function GET(request: Request) {
           'SALE' AS movement_type
         FROM SALES_ORDER
       ) AS all_history
-      WHERE ${filter}
+      WHERE ${whereFilter}
       ORDER BY occurred_at DESC, record_id DESC, kind ASC
       LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}
     `;
     const countQuery = Prisma.sql`
       SELECT COUNT(*) AS total
       FROM (
-        SELECT 'inventory' AS kind, transaction_type AS movement_type
+        SELECT 'inventory' AS kind, date_time AS occurred_at, transaction_type AS movement_type
         FROM INVENTORY_TRANSACTION
         UNION ALL
-        SELECT 'sale' AS kind, 'SALE' AS movement_type
+        SELECT 'sale' AS kind, order_date AS occurred_at, 'SALE' AS movement_type
         FROM SALES_ORDER
       ) AS all_history
-      WHERE ${filter}
+      WHERE ${whereFilter}
     `;
     const [pageRows, countRows] = await Promise.all([
       prisma.$queryRaw<Array<{ kind: "inventory" | "sale"; record_id: number }>>(historyQuery),

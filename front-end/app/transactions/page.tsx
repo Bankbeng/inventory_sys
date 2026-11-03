@@ -6,6 +6,13 @@ import { formatCurrency } from "@/lib/currency";
 import { formatDateTime as formatDateTimeValue } from "@/lib/date";
 import { formatSalesOrderNumber } from "@/lib/order-number";
 
+function getLocalDateValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 type TransactionDetail = {
   transaction_id: number;
   product_id: number;
@@ -90,6 +97,8 @@ export default function TransactionsPage() {
   const [currentStaffId, setCurrentStaffId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string | null>(null);
+  const [dateTo, setDateTo] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
@@ -99,8 +108,28 @@ export default function TransactionsPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      const historyParams = new URLSearchParams({
+        page: String(page),
+        pageSize: "50",
+        type: filterType,
+      });
+      if (dateFrom) {
+        historyParams.set("dateFrom", dateFrom);
+        historyParams.set(
+          "timezoneOffsetFrom",
+          String(new Date(`${dateFrom}T12:00:00`).getTimezoneOffset()),
+        );
+      }
+      if (dateTo) {
+        historyParams.set("dateTo", dateTo);
+        historyParams.set(
+          "timezoneOffsetTo",
+          String(new Date(`${dateTo}T12:00:00`).getTimezoneOffset()),
+        );
+      }
+
       const [historyResponse, productResponse, staffResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/history?page=${page}&pageSize=50&type=${filterType}`),
+        fetch(`${API_BASE_URL}/api/history?${historyParams}`),
         fetch(`${API_BASE_URL}/api/products`),
         fetch("/api/access-check?all=true"),
       ]);
@@ -143,11 +172,21 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterType, page]);
+  }, [dateFrom, dateTo, filterType, page]);
 
   useEffect(() => {
+    if (dateFrom === null && dateTo === null) {
+      const today = getLocalDateValue(new Date());
+      const initializationTimer = window.setTimeout(() => {
+        setDateFrom(today);
+        setDateTo(today);
+      }, 0);
+      return () => window.clearTimeout(initializationTimer);
+    }
+
+    if (dateFrom === null || dateTo === null) return;
     void Promise.resolve().then(loadData);
-  }, [loadData]);
+  }, [dateFrom, dateTo, loadData]);
 
   async function acknowledgeRecord(recordType: "inventory" | "sale", recordId: number) {
     const key = `${recordType}-${recordId}`;
@@ -319,6 +358,43 @@ export default function TransactionsPage() {
                 <option value="TRANSFER">ໂອນສິນຄ້າ</option>
                 <option value="SALE">ການຂາຍ</option>
               </select>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <span>From</span>
+                <input
+                  type="date"
+                  value={dateFrom ?? ""}
+                  onChange={(event) => {
+                    setDateFrom(event.target.value);
+                    setPage(1);
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-cyan-400"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <span>To</span>
+                <input
+                  type="date"
+                  value={dateTo ?? ""}
+                  onChange={(event) => {
+                    setDateTo(event.target.value);
+                    setPage(1);
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-cyan-400"
+                />
+              </label>
+              {(dateFrom || dateTo) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDateFrom("");
+                    setDateTo("");
+                    setPage(1);
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  ລ້າງວັນທີ
+                </button>
+              )}
               <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-medium text-cyan-700">
                 {totalItems} ລາຍການ
               </span>

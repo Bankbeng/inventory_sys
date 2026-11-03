@@ -114,6 +114,13 @@ function getDueDate(orderDate: string) {
   return formatDate(dueDate);
 }
 
+function getLocalDateValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function SalesPage() {
   const [sales, setSales] = useState<SalesOrder[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -122,6 +129,8 @@ export default function SalesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [warehouseStocks, setWarehouseStocks] = useState<ProductStock[]>([]);
   const [vehicleStocks, setVehicleStocks] = useState<ProductStock[]>([]);
+  const [orderDateFrom, setOrderDateFrom] = useState<string | null>(null);
+  const [orderDateTo, setOrderDateTo] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -133,10 +142,30 @@ export default function SalesPage() {
   const [form, setForm] = useState<SaleForm>(initialForm);
 
   const loadSalesData = useCallback(async () => {
+    setLoading(true);
     setStockLoading(true);
     setStockError(null);
 
     try {
+      const salesParams = new URLSearchParams({
+        page: String(page),
+        pageSize: "50",
+      });
+      if (orderDateFrom) {
+        salesParams.set("dateFrom", orderDateFrom);
+        salesParams.set(
+          "timezoneOffsetFrom",
+          String(new Date(`${orderDateFrom}T12:00:00`).getTimezoneOffset()),
+        );
+      }
+      if (orderDateTo) {
+        salesParams.set("dateTo", orderDateTo);
+        salesParams.set(
+          "timezoneOffsetTo",
+          String(new Date(`${orderDateTo}T12:00:00`).getTimezoneOffset()),
+        );
+      }
+
       const [
         salesResponse,
         productResponse,
@@ -146,7 +175,7 @@ export default function SalesPage() {
         warehouseStockResponse,
         vehicleStockResponse,
       ] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/sales-orders?page=${page}&pageSize=50`),
+        fetch(`${API_BASE_URL}/api/sales-orders?${salesParams}`),
         fetch(`${API_BASE_URL}/api/products`),
         fetch(`${API_BASE_URL}/api/warehouses`),
         fetch(`${API_BASE_URL}/api/vehicles`),
@@ -225,11 +254,20 @@ export default function SalesPage() {
       setLoading(false);
       setStockLoading(false);
     }
-  }, [page]);
+  }, [page, orderDateFrom, orderDateTo]);
 
   useEffect(() => {
+    if (orderDateFrom === null && orderDateTo === null) {
+      const today = getLocalDateValue(new Date());
+      const initializationTimer = window.setTimeout(() => {
+        setOrderDateFrom(today);
+        setOrderDateTo(today);
+      }, 0);
+      return () => window.clearTimeout(initializationTimer);
+    }
+
     void Promise.resolve().then(loadSalesData);
-  }, [loadSalesData]);
+  }, [loadSalesData, orderDateFrom, orderDateTo]);
 
   const sourceOptions = form.sourceType === "warehouse" ? warehouses : vehicles;
   const customerOptions = useMemo(
@@ -648,6 +686,33 @@ export default function SalesPage() {
 
           {message && <p className="mt-4 text-sm text-cyan-700">{message}</p>}
         </form>
+
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <label className="text-sm font-medium text-slate-700">
+            <span className="mb-2 block">From</span>
+            <input
+              type="date"
+              value={orderDateFrom ?? ""}
+              onChange={(event) => {
+                setOrderDateFrom(event.target.value);
+                setPage(1);
+              }}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
+            />
+          </label>
+          <label className="text-sm font-medium text-slate-700">
+            <span className="mb-2 block">To</span>
+            <input
+              type="date"
+              value={orderDateTo ?? ""}
+              onChange={(event) => {
+                setOrderDateTo(event.target.value);
+                setPage(1);
+              }}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
+            />
+          </label>
+        </div>
 
         {loading ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">

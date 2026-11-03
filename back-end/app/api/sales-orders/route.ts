@@ -15,7 +15,12 @@ export async function GET(request: Request) {
     const pageValue = url.searchParams.get("page");
     const pageSizeValue = url.searchParams.get("pageSize");
     const search = url.searchParams.get("search")?.trim() ?? "";
-    const isPaginated = pageValue !== null || pageSizeValue !== null || search !== "";
+    const dateFromValue = url.searchParams.get("dateFrom") ?? url.searchParams.get("date");
+    const dateToValue = url.searchParams.get("dateTo") ?? url.searchParams.get("date");
+    const timezoneOffsetFromValue = url.searchParams.get("timezoneOffsetFrom") ?? url.searchParams.get("timezoneOffset");
+    const timezoneOffsetToValue = url.searchParams.get("timezoneOffsetTo") ?? url.searchParams.get("timezoneOffset");
+    const isPaginated = pageValue !== null || pageSizeValue !== null || search !== "" ||
+      dateFromValue !== null || dateToValue !== null;
     const page = pageValue === null ? 1 : Number(pageValue);
     const pageSize = pageSizeValue === null ? 50 : Number(pageSizeValue);
     const orderNumberSearch = search.replace(/^SO-/i, "").trim();
@@ -31,8 +36,9 @@ export async function GET(request: Request) {
       );
     }
 
-    const where: Prisma.SalesOrderWhereInput | undefined = search
-      ? {
+    const conditions: Prisma.SalesOrderWhereInput[] = [];
+    if (search) {
+      conditions.push({
           OR: [
             ...(Number.isInteger(Number(search)) && Number(search) > 0
               ? [{ order_id: Number(search) }]
@@ -45,7 +51,52 @@ export async function GET(request: Request) {
             { sourceWarehouse: { warehouse_name: { contains: search } } },
             { sourceVehicle: { vehicle_name: { contains: search } } },
           ],
-        }
+      });
+    }
+
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+    const getDateStartUtc = (date: string | null) => {
+      if (date === null || !datePattern.test(date)) return null;
+      const timestamp = Date.parse(`${date}T00:00:00.000Z`);
+      return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === date
+        ? timestamp
+        : null;
+    };
+    const dateFromStartUtc = getDateStartUtc(dateFromValue);
+    const dateToStartUtc = getDateStartUtc(dateToValue);
+    const timezoneOffsetFrom = timezoneOffsetFromValue === null ? 0 : Number(timezoneOffsetFromValue);
+    const timezoneOffsetTo = timezoneOffsetToValue === null ? 0 : Number(timezoneOffsetToValue);
+
+    if (
+      (dateFromValue !== null && dateFromStartUtc === null) ||
+      (dateToValue !== null && dateToStartUtc === null) ||
+      (dateFromValue !== null && dateToValue !== null && dateFromValue > dateToValue) ||
+      (dateFromValue !== null && (!Number.isInteger(timezoneOffsetFrom) ||
+        timezoneOffsetFrom < -840 || timezoneOffsetFrom > 840)) ||
+      (dateToValue !== null && (!Number.isInteger(timezoneOffsetTo) ||
+        timezoneOffsetTo < -840 || timezoneOffsetTo > 840))
+    ) {
+        return NextResponse.json(
+          { error: "dateFrom and dateTo must be valid YYYY-MM-DD dates in order, with timezone offsets between -840 and 840" },
+          { status: 400, headers: corsHeaders },
+        );
+    }
+
+    if (dateFromStartUtc !== null || dateToStartUtc !== null) {
+      const orderDate: Prisma.DateTimeFilter = {};
+      if (dateFromStartUtc !== null) {
+        orderDate.gte = new Date(dateFromStartUtc + timezoneOffsetFrom * 60_000);
+      }
+      if (dateToStartUtc !== null) {
+        orderDate.lt = new Date(dateToStartUtc + (timezoneOffsetTo + 24 * 60) * 60_000);
+      }
+      conditions.push({
+        order_date: orderDate,
+      });
+    }
+
+    const where: Prisma.SalesOrderWhereInput | undefined = conditions.length
+      ? { AND: conditions }
       : undefined;
 
     const query: Prisma.SalesOrderFindManyArgs = {

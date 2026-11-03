@@ -167,13 +167,13 @@ textarea {
 }
 
 .invoice-company strong {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   letter-spacing: 0.04em;
 }
 
 .invoice-company p {
   margin: 0;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   line-height: 1.35;
 }
 
@@ -194,7 +194,7 @@ textarea {
 
 .invoice-order-details h2 {
   margin-bottom: 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -214,7 +214,7 @@ textarea {
 
 .invoice-meta dt {
   color: #475569;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   text-transform: uppercase;
 }
 
@@ -232,7 +232,7 @@ textarea {
   min-width: 72rem;
   margin-top: 1.5rem;
   border-collapse: collapse;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .invoice-items th,
@@ -241,6 +241,10 @@ textarea {
   padding: 0.55rem 0.35rem;
   text-align: right;
   vertical-align: top;
+}
+
+.invoice-items td:nth-child(2) {
+  font-size: 1.1em;
 }
 
 .invoice-items th:first-child,
@@ -256,7 +260,7 @@ textarea {
 .invoice-items tfoot th {
   border-top: 1px solid #0f172a;
   padding-top: 1rem;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 
 .invoice-summary {
@@ -300,7 +304,7 @@ textarea {
 
 .invoice-signatures > div {
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
@@ -312,7 +316,7 @@ textarea {
 
 .invoice-remarks {
   margin-top: 1.5rem;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   line-height: 1.45;
   break-inside: avoid;
 }
@@ -412,7 +416,7 @@ textarea {
   }
 
   .invoice-company p {
-    font-size: 6pt;
+    font-size: 7pt;
     line-height: 1.15;
   }
 
@@ -432,7 +436,7 @@ textarea {
   .invoice-items {
     table-layout: fixed;
     min-width: 0;
-    font-size: 7pt;
+    font-size: 8pt;
   }
 
   .invoice-items th,
@@ -447,7 +451,7 @@ textarea {
 
   .invoice-remarks {
     margin-top: 0.5rem;
-    font-size: 6pt;
+    font-size: 7pt;
     line-height: 1.2;
   }
 
@@ -467,7 +471,7 @@ textarea {
   }
 
   .invoice-signatures > div {
-    font-size: 7pt;
+    font-size: 8pt;
   }
 
   .invoice-signature-line {
