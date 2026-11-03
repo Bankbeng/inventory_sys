@@ -155,6 +155,7 @@ export default function RemainingStockPage() {
       return {
         product_id: product.product_id,
         product_name: getProductLabel(product),
+        unit: product.unit,
         warehouseEntries,
         vehicleEntries,
         totalQty: warehouseQty + vehicleQty,
@@ -216,87 +217,145 @@ export default function RemainingStockPage() {
         ) : (
           <section aria-label={`${displayMode} stock`}>
             {displayMode === "product" && (
-              <div className="overflow-x-auto border-y border-slate-200">
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                  <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
                     <tr>
-                      <th scope="col" className="px-3 py-3 font-medium">Product</th>
-                      <th scope="col" className="px-3 py-3 font-medium">Warehouse breakdown</th>
-                      <th scope="col" className="px-3 py-3 font-medium">Vehicle breakdown</th>
-                      <th scope="col" className="px-3 py-3 font-medium">Total remaining</th>
+                      <th scope="col" className="px-4 py-3 font-semibold">Product</th>
+                      <th scope="col" className="px-4 py-3 font-semibold">Warehouse stock</th>
+                      <th scope="col" className="px-4 py-3 font-semibold">Vehicle stock</th>
+                      <th scope="col" className="px-4 py-3 text-right font-semibold">Total remaining</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {remainingProductRows.length > 0 ? remainingProductRows.map((item) => (
-                      <tr key={item.product_id}>
-                        <td className="px-3 py-3 text-slate-700">{item.product_name}</td>
-                        <td className="px-3 py-3 text-slate-700">
-                          {item.warehouseEntries.length > 0
-                            ? item.warehouseEntries.map((entry) => `${entry.name}: ${entry.quantity}`).join("; ")
-                            : "No warehouse stock"}
-                        </td>
-                        <td className="px-3 py-3 text-slate-700">
-                          {item.vehicleEntries.length > 0
-                            ? item.vehicleEntries.map((entry) => `${entry.name}: ${entry.quantity}`).join("; ")
-                            : "No vehicle stock"}
-                        </td>
-                        <td className={`px-3 py-3 font-medium ${item.totalQty <= 10 ? "text-amber-700" : "text-emerald-700"}`}>
-                          {item.totalQty}
-                        </td>
-                      </tr>
-                    )) : (
-                      <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-500">{selectedCategory === "all" ? "No products available." : "No products match this category."}</td></tr>
-                    )}
+                {remainingProductRows.length > 0 ? remainingProductRows.map((item) => (
+                  <tr key={item.product_id} className="bg-white transition-colors hover:bg-cyan-50/50">
+                    <td className="min-w-56 px-4 py-3.5">
+                      <p className="font-semibold leading-5 text-slate-900">{item.product_name}</p>
+                      <p className="mt-1 text-xs font-medium text-slate-400">ID #{item.product_id}</p>
+                    </td>
+                    <td className="min-w-56 px-4 py-3.5">
+                      {item.warehouseEntries.length > 0 ? (
+                        <ul className="space-y-1.5">
+                          {item.warehouseEntries.map((entry) => (
+                            <li key={entry.name} className="flex items-baseline justify-between gap-3">
+                              <span className="text-slate-600">{entry.name}</span>
+                              <span className="shrink-0 font-semibold tabular-nums text-cyan-800">
+                                {entry.quantity}{item.unit ? ` ${item.unit}` : ""}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span className="text-slate-400">No warehouse stock</span>
+                      )}
+                    </td>
+                    <td className="min-w-56 px-4 py-3.5">
+                      {item.vehicleEntries.length > 0 ? (
+                        <ul className="space-y-1.5">
+                          {item.vehicleEntries.map((entry) => (
+                            <li key={entry.name} className="flex items-baseline justify-between gap-3">
+                              <span className="text-slate-600">{entry.name}</span>
+                              <span className="shrink-0 font-semibold tabular-nums text-indigo-700">
+                                {entry.quantity}{item.unit ? ` ${item.unit}` : ""}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span className="text-slate-400">No vehicle stock</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                      <span className={`text-base font-bold tabular-nums ${
+                        item.totalQty <= 10 ? "text-amber-700" : "text-emerald-700"
+                      }`}>
+                        {item.totalQty}
+                      </span>
+                      {item.unit && <span className="ml-1 text-xs font-medium text-slate-500">{item.unit}</span>}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                      {selectedCategory === "all" ? "No products available." : "No products match this category."}
+                    </td>
+                  </tr>
+                )}
                   </tbody>
                 </table>
               </div>
             )}
 
             {displayMode === "warehouse" && (
-              <div className="overflow-x-auto border-y border-slate-200">
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                  <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
                     <tr>
-                      <th scope="col" className="px-3 py-3 font-medium">Warehouse</th>
-                      <th scope="col" className="px-3 py-3 font-medium">Product</th>
-                      <th scope="col" className="px-3 py-3 font-medium">Quantity</th>
+                      <th scope="col" className="px-4 py-3 font-semibold">Warehouse</th>
+                      <th scope="col" className="px-4 py-3 font-semibold">Product</th>
+                      <th scope="col" className="px-4 py-3 text-right font-semibold">Quantity</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {visibleWarehouseStocks.length > 0 ? visibleWarehouseStocks.map((item) => (
-                      <tr key={`${item.warehouse_id}-${item.product_id}`} className={item.quantity <= 10 ? "bg-amber-500/5" : ""}>
-                        <td className="px-3 py-3 text-slate-700">{item.warehouse?.warehouse_name ?? `Warehouse ${item.warehouse_id}`}</td>
-                        <td className="px-3 py-3 text-slate-700">{item.product ? getProductLabel(item.product) : `Product ${item.product_id}`}</td>
-                        <td className={`px-3 py-3 font-medium ${item.quantity <= 10 ? "text-amber-700" : "text-emerald-700"}`}>{item.quantity}</td>
-                      </tr>
-                    )) : (
-                      <tr><td colSpan={3} className="px-3 py-6 text-center text-slate-500">{selectedCategory === "all" ? "No warehouse stock available." : "No warehouse stock for this category."}</td></tr>
-                    )}
+                {visibleWarehouseStocks.length > 0 ? visibleWarehouseStocks.map((item) => (
+                  <tr key={`${item.warehouse_id}-${item.product_id}`} className="bg-white transition-colors hover:bg-cyan-50/50">
+                    <td className="px-4 py-3.5 font-medium text-cyan-800">
+                      {item.warehouse?.warehouse_name ?? `Warehouse ${item.warehouse_id}`}
+                    </td>
+                    <td className="px-4 py-3.5 font-semibold text-slate-800">
+                      {item.product ? getProductLabel(item.product) : `Product ${item.product_id}`}
+                    </td>
+                    <td className={`whitespace-nowrap px-4 py-3.5 text-right font-bold tabular-nums ${
+                      item.quantity <= 10 ? "text-amber-700" : "text-emerald-700"
+                    }`}>
+                      {item.quantity}{item.product?.unit ? ` ${item.product.unit}` : ""}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-8 text-center text-slate-500">
+                      {selectedCategory === "all" ? "No warehouse stock available." : "No warehouse stock for this category."}
+                    </td>
+                  </tr>
+                )}
                   </tbody>
                 </table>
               </div>
             )}
 
             {displayMode === "vehicle" && (
-              <div className="overflow-x-auto border-y border-slate-200">
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                  <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
                     <tr>
-                      <th scope="col" className="px-3 py-3 font-medium">Vehicle</th>
-                      <th scope="col" className="px-3 py-3 font-medium">Product</th>
-                      <th scope="col" className="px-3 py-3 font-medium">Quantity</th>
+                      <th scope="col" className="px-4 py-3 font-semibold">Vehicle</th>
+                      <th scope="col" className="px-4 py-3 font-semibold">Product</th>
+                      <th scope="col" className="px-4 py-3 text-right font-semibold">Quantity</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {visibleVehicleStocks.length > 0 ? visibleVehicleStocks.map((item) => (
-                      <tr key={`${item.vehicle_id}-${item.product_id}`} className={item.quantity <= 10 ? "bg-rose-500/5" : ""}>
-                        <td className="px-3 py-3 text-slate-700">{item.vehicle?.vehicle_name ?? `Vehicle ${item.vehicle_id}`}</td>
-                        <td className="px-3 py-3 text-slate-700">{item.product ? getProductLabel(item.product) : `Product ${item.product_id}`}</td>
-                        <td className={`px-3 py-3 font-medium ${item.quantity <= 10 ? "text-rose-700" : "text-emerald-700"}`}>{item.quantity}</td>
-                      </tr>
-                    )) : (
-                      <tr><td colSpan={3} className="px-3 py-6 text-center text-slate-500">{selectedCategory === "all" ? "No vehicle stock available." : "No vehicle stock for this category."}</td></tr>
-                    )}
+                {visibleVehicleStocks.length > 0 ? visibleVehicleStocks.map((item) => (
+                  <tr key={`${item.vehicle_id}-${item.product_id}`} className="bg-white transition-colors hover:bg-cyan-50/50">
+                    <td className="px-4 py-3.5 font-medium text-indigo-700">
+                      {item.vehicle?.vehicle_name ?? `Vehicle ${item.vehicle_id}`}
+                    </td>
+                    <td className="px-4 py-3.5 font-semibold text-slate-800">
+                      {item.product ? getProductLabel(item.product) : `Product ${item.product_id}`}
+                    </td>
+                    <td className={`whitespace-nowrap px-4 py-3.5 text-right font-bold tabular-nums ${
+                      item.quantity <= 10 ? "text-rose-700" : "text-emerald-700"
+                    }`}>
+                      {item.quantity}{item.product?.unit ? ` ${item.product.unit}` : ""}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-8 text-center text-slate-500">
+                      {selectedCategory === "all" ? "No vehicle stock available." : "No vehicle stock for this category."}
+                    </td>
+                  </tr>
+                )}
                   </tbody>
                 </table>
               </div>
