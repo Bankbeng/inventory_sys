@@ -464,7 +464,6 @@ export default function SalesPage() {
                 }))}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
               >
-                <option value="paid">ຈ່າຍແລ້ວ</option>
                 <option value="unpaid">ຕິດໜີ້</option>
               </select>
             </label>

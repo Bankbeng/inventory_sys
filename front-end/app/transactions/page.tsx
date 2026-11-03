@@ -243,30 +243,30 @@ export default function TransactionsPage() {
     return attributes ? `${product.product_name} (${attributes})` : product.product_name;
   };
 
+  const getProductUnit = (productId: number): string =>
+    products.find((product) => product.product_id === productId)?.unit ?? "";
+
   const getTransactionDescription = (transaction: Transaction): string => {
     const staffName = transaction.staff?.staff_name ?? `ພະນັກງານ ${transaction.staff_id}`;
-    const details = transaction.details?.[0];
-    const quantity = details?.quantity ?? 0;
-    const productName = details ? getProductName(details.product_id) : "ບໍ່ຮູ້ຈັກສິນຄ້າ";
 
     switch (transaction.transaction_type) {
       case "INBOUND":
         if (transaction.toWarehouse) {
-          return `${staffName} ຮັບສິນຄ້າ ${productName} ຈຳນວນ ${quantity} ເຂົ້າສາງ ${transaction.toWarehouse.warehouse_name}`;
+          return `${staffName} ຮັບສິນຄ້າເຂົ້າສາງ ${transaction.toWarehouse.warehouse_name}`;
         }
         if (transaction.toVehicle) {
-          return `${staffName} ຮັບສິນຄ້າ ${productName} ຈຳນວນ ${quantity} ເຂົ້າລົດ ${transaction.toVehicle.vehicle_name}`;
+          return `${staffName} ຮັບສິນຄ້າເຂົ້າລົດ ${transaction.toVehicle.vehicle_name}`;
         }
-        return `${staffName} ຮັບສິນຄ້າ ${productName} ຈຳນວນ ${quantity}`;
+        return `${staffName} ຮັບສິນຄ້າເຂົ້າ`;
 
       case "OUTBOUND":
         if (transaction.fromWarehouse) {
-          return `${staffName} ນຳສິນຄ້າ ${productName} ຈຳນວນ ${quantity} ອອກຈາກສາງ ${transaction.fromWarehouse.warehouse_name}`;
+          return `${staffName} ນຳສິນຄ້າອອກຈາກສາງ ${transaction.fromWarehouse.warehouse_name}`;
         }
         if (transaction.fromVehicle) {
-          return `${staffName} ນຳສິນຄ້າ ${productName} ຈຳນວນ ${quantity} ອອກຈາກລົດ ${transaction.fromVehicle.vehicle_name}`;
+          return `${staffName} ນຳສິນຄ້າອອກຈາກລົດ ${transaction.fromVehicle.vehicle_name}`;
         }
-        return `${staffName} ນຳສິນຄ້າ ${productName} ຈຳນວນ ${quantity} ອອກ`;
+        return `${staffName} ນຳສິນຄ້າອອກ`;
 
       case "TRANSFER":
         let source = "";
@@ -284,10 +284,10 @@ export default function TransactionsPage() {
           destination = `ລົດ ${transaction.toVehicle.vehicle_name}`;
         }
 
-        return `${staffName} ໂອນສິນຄ້າ ${productName} ຈຳນວນ ${quantity} ຈາກ${source} ໄປ${destination}`;
+        return `${staffName} ໂອນສິນຄ້າຈາກ${source} ໄປ${destination}`;
 
       default:
-        return `${staffName} ເຄື່ອນຍ້າຍສິນຄ້າ ${productName} ຈຳນວນ ${quantity}`;
+        return `${staffName} ເຄື່ອນຍ້າຍສິນຄ້າ`;
     }
   };
 
@@ -414,59 +414,63 @@ export default function TransactionsPage() {
               {filteredTransactions.map((entry) => (
                 <div
                   key={entry.type === "SALE" ? `sale-${entry.order.order_id}` : `inventory-${entry.transaction.transaction_id}`}
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 hover:border-slate-300 transition"
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-300 hover:shadow-md sm:p-5"
                 >
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
+                  <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getTransactionBadgeColor(entry.type === "SALE" ? "SALE" : entry.transaction.transaction_type)}`}>
                           {getTransactionTypeLabel(entry.type === "SALE" ? "SALE" : entry.transaction.transaction_type)}
                         </span>
-                        <span className="text-sm text-slate-500">
+                        <span className="text-xs font-medium text-slate-500">
                           {entry.type === "SALE" ? `ໃບຂາຍ #${entry.order.order_id}` : `ລາຍການ #${entry.transaction.transaction_id}`}
                         </span>
                       </div>
-                      <p className="text-slate-700 text-sm">
+                      <p className="text-sm font-medium leading-6 text-slate-800">
                         {entry.type === "SALE" ? getSaleDescription(entry.order) : getTransactionDescription(entry.transaction)}
                       </p>
                     </div>
-                    <div className="text-right text-sm text-slate-500">
+                    <div className="shrink-0 text-left text-xs font-medium text-slate-500 sm:text-right sm:text-sm">
                       {formatDateTime(entry.date)}
                     </div>
                   </div>
 
                   {entry.type === "SALE" ? (
-                    <div className="mt-3 border-t border-slate-200 pt-3">
-                      <div className="space-y-2 text-xs">
-                        {(entry.order.details ?? []).map((detail) => (
-                          <div key={`${entry.order.order_id}-${detail.product_id}`} className="flex flex-wrap justify-between gap-x-4 gap-y-1">
-                            <span className="font-medium text-cyan-700">{getProductName(detail.product_id)}</span>
-                            <span className="text-slate-600">
-                              {detail.quantity_sold} ໜ່ວຍ × {formatCurrency(Number(detail.sold_at_price))} = {formatCurrency(Number(detail.quantity_sold) * Number(detail.sold_at_price))}
+                    <div className="mt-4 border-t border-slate-200 pt-3">
+                      <div className="space-y-2">
+                        {(entry.order.details ?? []).map((detail, index) => (
+                          <div key={`${entry.order.order_id}-${detail.product_id}-${index}`} className="flex flex-col gap-2 rounded-xl bg-slate-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                            <span className="font-semibold text-slate-800">{getProductName(detail.product_id)}</span>
+                            <span className="text-sm font-medium text-slate-700 sm:text-right">
+                              <span className="text-indigo-700">
+                                {detail.quantity_sold}{getProductUnit(detail.product_id) ? ` ${getProductUnit(detail.product_id)}` : ""}
+                              </span>
+                              {" × "}{formatCurrency(Number(detail.sold_at_price))} ={" "}
+                              <span className="font-semibold text-slate-900">{formatCurrency(Number(detail.quantity_sold) * Number(detail.sold_at_price))}</span>
                             </span>
                           </div>
                         ))}
                         {entry.order.discount_amount > 0 && (
-                          <div className="flex justify-end border-t border-slate-200 pt-2 text-slate-600">
+                          <div className="flex justify-end border-t border-slate-200 pt-2 text-sm font-medium text-rose-700">
                             Discount: -{formatCurrency(Number(entry.order.discount_amount))}
                           </div>
                         )}
-                        <div className="flex justify-end border-t border-slate-200 pt-2 font-semibold text-slate-800">
+                        <div className="flex justify-end border-t border-slate-200 pt-3 text-sm font-bold text-slate-900">
                           ລວມທັງໝົດ: {formatCurrency(Number(entry.order.total_amount))}
                         </div>
                       </div>
                     </div>
                   ) : entry.transaction.details && entry.transaction.details.length > 0 ? (
-                    <div className="mt-3 pt-3 border-t border-slate-200">
-                      <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div className="mt-4 border-t border-slate-200 pt-3">
+                      <div className="space-y-2">
                         {entry.transaction.details.map((detail, idx) => (
-                          <div key={idx} className="space-y-1">
-                            <p className="text-slate-500">ສິນຄ້າ</p>
-                            <p className="text-cyan-700 font-medium">
+                          <div key={idx} className="flex flex-col gap-2 rounded-xl bg-slate-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="font-semibold text-slate-800">
                               {getProductName(detail.product_id)}
                             </p>
-                            <p className="text-slate-500 mt-2">ຈຳນວນ</p>
-                            <p className="text-emerald-700 font-medium">{detail.quantity} ໜ່ວຍ</p>
+                            <p className="text-sm font-semibold text-emerald-800 sm:text-right">
+                              {detail.quantity}{getProductUnit(detail.product_id) ? ` ${getProductUnit(detail.product_id)}` : ""}
+                            </p>
                           </div>
                         ))}
                       </div>
