@@ -88,7 +88,7 @@ const buildEmptyLine = (): SaleLine => ({
 
 const initialForm: SaleForm = {
   customerId: "",
-  paymentStatus: "paid",
+  paymentStatus: "unpaid",
   sourceType: "warehouse",
   sourceId: "",
   discountAmount: "0",
@@ -407,7 +407,7 @@ export default function SalesPage() {
 
       setForm({
         customerId: "",
-        paymentStatus: "paid",
+        paymentStatus: "unpaid",
         sourceType: "warehouse",
         sourceId: warehouses[0] ? String(warehouses[0].warehouse_id) : "",
         discountAmount: "0",
