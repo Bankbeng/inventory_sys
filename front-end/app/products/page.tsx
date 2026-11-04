@@ -247,7 +247,7 @@ export default function ProductsPage() {
             <label className="text-sm text-slate-700 md:col-span-2 xl:col-span-1">
               <span className="mb-2 block">Retail price</span>
               <input
-                required
+    
                 type="number"
                 step="0.01"
                 value={form.retail_price}
