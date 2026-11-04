@@ -104,6 +104,8 @@ export default function TransactionsPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingAcknowledgement, setPendingAcknowledgement] = useState<string | null>(null);
+  const [pendingDeletion, setPendingDeletion] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -165,6 +167,7 @@ export default function TransactionsPage() {
       setTotalItems(historyData.pagination.totalItems);
       setProducts(productData);
       setCurrentStaffId(staffData.staff_id);
+      setIsAdmin(staffData.isAdmin === true);
       setErrorMessage(null);
     } catch (error) {
       console.error("Failed to load data", error);
@@ -229,6 +232,43 @@ export default function TransactionsPage() {
       setErrorMessage(error instanceof Error ? error.message : "ບໍ່ສາມາດຮັບຊາບລາຍການໄດ້.");
     } finally {
       setPendingAcknowledgement(null);
+    }
+  }
+
+  async function deleteInventoryTransaction(transactionId: number) {
+    if (!window.confirm("ຢືນຢັນການລົບລາຍການນີ້? ລະບົບຈະປັບຍອດສິນຄ້າກັບຄືນ.")) {
+      return;
+    }
+
+    setPendingDeletion(transactionId);
+    setErrorMessage(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/inventory-transactions/${transactionId}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        if (data.error === "Administrator access required") {
+          throw new Error("ສະເພາະຜູ້ດູແລລະບົບເທົ່ານັ້ນທີ່ສາມາດລົບລາຍການໄດ້.");
+        }
+        if (typeof data.error === "string" && data.error.startsWith("Insufficient")) {
+          throw new Error("ບໍ່ສາມາດລົບໄດ້ ເນື່ອງຈາກຍອດສິນຄ້າປັດຈຸບັນບໍ່ພຽງພໍໃນການປັບກັບຄືນ.");
+        }
+        throw new Error("ບໍ່ສາມາດລົບລາຍການໄດ້. ກະລຸນາລອງໃໝ່.");
+      }
+
+      const remainingItems = Math.max(0, totalItems - 1);
+      const remainingPages = Math.ceil(remainingItems / 50);
+      if (page > remainingPages && remainingPages > 0) {
+        setPage(remainingPages);
+      } else {
+        await loadData();
+      }
+    } catch (error) {
+      console.error("Failed to delete inventory transaction", error);
+      setErrorMessage(error instanceof Error ? error.message : "ບໍ່ສາມາດລົບລາຍການໄດ້.");
+    } finally {
+      setPendingDeletion(null);
     }
   }
 
@@ -521,6 +561,18 @@ export default function TransactionsPage() {
                               : hasAcknowledged
                                 ? "ຮັບຊາບແລ້ວ"
                                 : "ຮັບຊາບ"}
+                          </button>
+                        )}
+                        {isAdmin && entry.type === "inventory" && (
+                          <button
+                            type="button"
+                            onClick={() => void deleteInventoryTransaction(entry.transaction.transaction_id)}
+                            disabled={pendingDeletion !== null}
+                            className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {pendingDeletion === entry.transaction.transaction_id
+                              ? "ກຳລັງລົບ..."
+                              : "ລົບລາຍການ"}
                           </button>
                         )}
                       </div>
