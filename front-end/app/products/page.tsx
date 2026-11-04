@@ -98,8 +98,13 @@ export default function ProductsPage() {
       return;
     }
 
-    if (!Number(form.retail_price) && form.retail_price.trim() !== "0") {
-      setMessage("Retail price must be a valid number.");
+    const retailPrice = Number(form.retail_price);
+    if (
+      form.retail_price.trim() === "" ||
+      !Number.isFinite(retailPrice) ||
+      retailPrice < 0
+    ) {
+      setMessage("Retail price must be a valid number greater than or equal to 0.");
       return;
     }
 
@@ -113,7 +118,7 @@ export default function ProductsPage() {
         type: form.type.trim(),
         size: form.size.trim(),
         unit: form.unit.trim(),
-        retail_price: Number(form.retail_price),
+        retail_price: retailPrice,
       };
 
       const response = await fetch(
@@ -247,8 +252,9 @@ export default function ProductsPage() {
             <label className="text-sm text-slate-700 md:col-span-2 xl:col-span-1">
               <span className="mb-2 block">Retail price</span>
               <input
-    
+                required
                 type="number"
+                min="0"
                 step="0.01"
                 value={form.retail_price}
                 onChange={(event) => handleChange("retail_price", event.target.value)}
