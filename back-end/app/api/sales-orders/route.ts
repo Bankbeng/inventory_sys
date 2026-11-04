@@ -43,9 +43,9 @@ export async function GET(request: Request) {
 
     if (
       (sourceWarehouseIdValue !== null &&
-        (!Number.isInteger(sourceWarehouseId) || sourceWarehouseId <= 0)) ||
+        (sourceWarehouseId === null || !Number.isInteger(sourceWarehouseId) || sourceWarehouseId <= 0)) ||
       (sourceVehicleIdValue !== null &&
-        (!Number.isInteger(sourceVehicleId) || sourceVehicleId <= 0)) ||
+        (sourceVehicleId === null || !Number.isInteger(sourceVehicleId) || sourceVehicleId <= 0)) ||
       (sourceWarehouseIdValue !== null && sourceVehicleIdValue !== null)
     ) {
       return NextResponse.json(
