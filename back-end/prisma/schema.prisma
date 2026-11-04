@@ -16,11 +16,11 @@ model Staff {
   password   String
   role       String
 
-  inventoryTransactions InventoryTransaction[]
-  salesOrders           SalesOrder[]
-  recordedPayments      SalesOrderPayment[] @relation("paymentRecorder")
+  inventoryTransactions     InventoryTransaction[]
+  salesOrders               SalesOrder[]
+  recordedPayments          SalesOrderPayment[]                   @relation("paymentRecorder")
   inventoryAcknowledgements InventoryTransactionAcknowledgement[]
-  salesAcknowledgements SalesOrderAcknowledgement[]
+  salesAcknowledgements     SalesOrderAcknowledgement[]
 
   @@map("STAFF")
 }
@@ -120,12 +120,12 @@ model InventoryTransaction {
   from_vehicle_id   Int?
   to_vehicle_id     Int?
 
-  staff         Staff               @relation(fields: [staff_id], references: [staff_id])
-  fromWarehouse Warehouse?          @relation("fromWarehouse", fields: [from_warehouse_id], references: [warehouse_id])
-  toWarehouse   Warehouse?          @relation("toWarehouse", fields: [to_warehouse_id], references: [warehouse_id])
-  fromVehicle   Vehicle?            @relation("fromVehicle", fields: [from_vehicle_id], references: [vehicle_id])
-  toVehicle     Vehicle?            @relation("toVehicle", fields: [to_vehicle_id], references: [vehicle_id])
-  details       TransactionDetail[]
+  staff            Staff                                 @relation(fields: [staff_id], references: [staff_id])
+  fromWarehouse    Warehouse?                            @relation("fromWarehouse", fields: [from_warehouse_id], references: [warehouse_id])
+  toWarehouse      Warehouse?                            @relation("toWarehouse", fields: [to_warehouse_id], references: [warehouse_id])
+  fromVehicle      Vehicle?                              @relation("fromVehicle", fields: [from_vehicle_id], references: [vehicle_id])
+  toVehicle        Vehicle?                              @relation("toVehicle", fields: [to_vehicle_id], references: [vehicle_id])
+  details          TransactionDetail[]
   acknowledgements InventoryTransactionAcknowledgement[]
 
   @@index([date_time, transaction_id])
@@ -158,12 +158,12 @@ model SalesOrder {
   total_amount        Float
   is_paid             Boolean  @default(true)
 
-  salesperson     Staff               @relation(fields: [salesperson_id], references: [staff_id])
-  customer        Customer?           @relation(fields: [customer_id], references: [customer_id], onDelete: SetNull)
-  sourceVehicle   Vehicle?            @relation(fields: [source_vehicle_id], references: [vehicle_id])
-  sourceWarehouse Warehouse?          @relation(fields: [source_warehouse_id], references: [warehouse_id])
-  details         SalesOrderDetail[]
-  payments        SalesOrderPayment[]
+  salesperson      Staff                       @relation(fields: [salesperson_id], references: [staff_id])
+  customer         Customer?                   @relation(fields: [customer_id], references: [customer_id], onDelete: SetNull)
+  sourceVehicle    Vehicle?                    @relation(fields: [source_vehicle_id], references: [vehicle_id])
+  sourceWarehouse  Warehouse?                  @relation(fields: [source_warehouse_id], references: [warehouse_id])
+  details          SalesOrderDetail[]
+  payments         SalesOrderPayment[]
   acknowledgements SalesOrderAcknowledgement[]
 
   @@index([order_date, order_id])
@@ -175,6 +175,20 @@ model SalesOrderNumberSequence {
   next_number Int
 
   @@map("SALES_ORDER_NUMBER_SEQUENCE")
+}
+
+model DeletedSalesOrder {
+  id              Int      @id @default(autoincrement())
+  order_id        Int
+  order_number    Int
+  order_snapshot  Json
+  deleted_at      DateTime @default(now())
+  deleted_by_name String
+  note            String?  @db.Text
+
+  @@index([order_number])
+  @@index([deleted_at])
+  @@map("DELETED_SALES_ORDER")
 }
 
 model InventoryTransactionAcknowledgement {

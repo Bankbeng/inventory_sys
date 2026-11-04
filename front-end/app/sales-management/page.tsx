@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
-import { formatDate } from "@/lib/date";
+import { formatDate, formatDateTime } from "@/lib/date";
 import { formatSalesOrderNumber } from "@/lib/order-number";
 import SearchableSelect from "../components/SearchableSelect";
 
@@ -64,6 +64,38 @@ type SalesOrder = {
   details: SaleDetail[];
 };
 
+type DeletedSalesOrder = {
+  id: number;
+  order_id: number;
+  order_number: number;
+  order_snapshot: {
+    customer_name: string;
+    order_date: string;
+    salesperson_name: string;
+    source_location: string;
+    total_amount: number;
+    is_paid: boolean;
+    items: {
+      product_id: number;
+      product_name: string;
+      type: string;
+      size: string;
+      unit: string;
+      quantity_sold: number;
+      sold_at_price: number;
+    }[];
+    payments: {
+      amount: number;
+      paid_at: string;
+      note: string | null;
+      recorded_by: string | null;
+    }[];
+  };
+  deleted_at: string;
+  deleted_by_name: string;
+  note: string | null;
+};
+
 type SaleLine = {
   productId: string;
   quantity: string;
@@ -90,6 +122,7 @@ function getProductLabel(product: Pick<Product, "product_name" | "type" | "size"
 
 export default function SalesManagementPage() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
+  const [deletedOrders, setDeletedOrders] = useState<DeletedSalesOrder[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -99,9 +132,14 @@ export default function SalesManagementPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
+  const [deletedOrdersPage, setDeletedOrdersPage] = useState(1);
+  const [deletedOrdersTotalPages, setDeletedOrdersTotalPages] = useState(0);
+  const [deletedOrdersTotal, setDeletedOrdersTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingDeletedOrders, setLoadingDeletedOrders] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
+  const [savingDeletedOrderId, setSavingDeletedOrderId] = useState<number | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
   const [form, setForm] = useState<SaleForm>({
     customerId: "",
@@ -171,6 +209,38 @@ export default function SalesManagementPage() {
     const timer = window.setTimeout(() => void loadData(), search ? 250 : 0);
     return () => window.clearTimeout(timer);
   }, [loadData, search]);
+
+  const loadDeletedOrders = useCallback(async (requestedPage = deletedOrdersPage) => {
+    setLoadingDeletedOrders(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/deleted-sales-orders?page=${requestedPage}&pageSize=50`,
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load deleted sales order history.");
+      }
+      if (!Array.isArray(data.items) || !Number.isInteger(data.pagination?.totalPages)) {
+        throw new Error("Unexpected response while loading deleted sales order history.");
+      }
+      setDeletedOrders(data.items);
+      setDeletedOrdersTotal(data.pagination.totalItems);
+      setDeletedOrdersTotalPages(data.pagination.totalPages);
+      if (requestedPage > Math.max(1, data.pagination.totalPages)) {
+        setDeletedOrdersPage(Math.max(1, data.pagination.totalPages));
+      }
+    } catch (loadError) {
+      console.error("Failed to load deleted sales order history", loadError);
+      setError(loadError instanceof Error ? loadError.message : "Failed to load deleted sales order history.");
+    } finally {
+      setLoadingDeletedOrders(false);
+    }
+  }, [deletedOrdersPage]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadDeletedOrders(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadDeletedOrders]);
 
   const customerOptions = useMemo(
     () => customers.map((customer) => ({
@@ -307,10 +377,12 @@ export default function SalesManagementPage() {
 
   async function deleteOrder(order: SalesOrder) {
     if (!window.confirm(
-      `Delete order ${formatSalesOrderNumber(order.order_number)}? Its items will be returned to stock and its payment history will be removed.`,
+      `Delete order ${formatSalesOrderNumber(order.order_number)}? Its items will be returned to stock and its details will be kept in deleted-order history.`,
     )) {
       return;
     }
+    const note = window.prompt("Add an optional note to the deleted order history:", "");
+    if (note === null) return;
 
     setDeletingOrderId(order.order_id);
     setError(null);
@@ -318,6 +390,8 @@ export default function SalesManagementPage() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/sales-orders/${order.order_id}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -326,13 +400,40 @@ export default function SalesManagementPage() {
       if (editingOrderId === order.order_id) {
         cancelEditing();
       }
-      await loadData();
+      setDeletedOrdersPage(1);
+      await Promise.all([loadData(), loadDeletedOrders(1)]);
       setMessage(`Order ${formatSalesOrderNumber(order.order_number)} deleted and stock returned.`);
     } catch (deleteError) {
       console.error("Failed to delete sales order", deleteError);
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete sales order.");
     } finally {
       setDeletingOrderId(null);
+    }
+  }
+
+  async function saveDeletedOrderNote(order: DeletedSalesOrder) {
+    setSavingDeletedOrderId(order.id);
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/deleted-sales-orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: order.note ?? "" }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save deleted order note.");
+      }
+      setDeletedOrders((current) => current.map((item) => item.id === order.id
+        ? { ...item, note: data.note }
+        : item));
+      setMessage(`Note for ${formatSalesOrderNumber(order.order_number)} saved.`);
+    } catch (saveError) {
+      console.error("Failed to save deleted sales order note", saveError);
+      setError(saveError instanceof Error ? saveError.message : "Failed to save deleted order note.");
+    } finally {
+      setSavingDeletedOrderId(null);
     }
   }
 
@@ -684,6 +785,128 @@ export default function SalesManagementPage() {
                   type="button"
                   onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                   disabled={page >= totalPages}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="p-4">
+            <h2 className="text-lg font-semibold">Deleted sales order history</h2>
+            <p className="text-sm text-slate-500">
+              {deletedOrdersTotal} deleted order(s). Order and item details are kept here, and notes can be updated later.
+            </p>
+          </div>
+          {loadingDeletedOrders ? (
+            <div role="status" className="border-t border-slate-200 p-6 text-slate-600">Loading deleted orders...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                <thead className="bg-slate-100 text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Order</th>
+                    <th className="px-4 py-3 font-medium">Original date</th>
+                    <th className="px-4 py-3 font-medium">Customer / salesperson</th>
+                    <th className="px-4 py-3 font-medium">Source</th>
+                    <th className="px-4 py-3 font-medium">Items</th>
+                    <th className="px-4 py-3 font-medium">Amount</th>
+                    <th className="px-4 py-3 font-medium">Deleted</th>
+                    <th className="px-4 py-3 font-medium">Note</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {deletedOrders.length > 0 ? deletedOrders.map((order) => (
+                    <tr key={order.id} className="align-top hover:bg-slate-50">
+                      <td className="whitespace-nowrap px-4 py-3 font-medium">
+                        {formatSalesOrderNumber(order.order_number)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {formatDate(order.order_snapshot.order_date)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div>{order.order_snapshot.customer_name}</div>
+                        <div className="text-xs text-slate-500">{order.order_snapshot.salesperson_name}</div>
+                      </td>
+                      <td className="px-4 py-3">{order.order_snapshot.source_location}</td>
+                      <td className="min-w-60 px-4 py-3">
+                        <ul className="space-y-1">
+                          {order.order_snapshot.items.map((item, index) => (
+                            <li key={`${item.product_id}-${index}`}>
+                              {getProductLabel(item)} ({item.quantity_sold} × {formatCurrency(item.sold_at_price)})
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-cyan-700">
+                        {formatCurrency(order.order_snapshot.total_amount)}
+                        <div className="text-xs text-slate-500">
+                          {order.order_snapshot.is_paid ? "Paid" : "Unpaid"}
+                        </div>
+                        {order.order_snapshot.payments.map((payment, index) => (
+                          <div key={`${payment.paid_at}-${index}`} className="text-xs text-slate-500">
+                            Payment: {formatCurrency(payment.amount)}
+                            {payment.note ? ` · ${payment.note}` : ""}
+                          </div>
+                        ))}
+                      </td>
+                      <td className="min-w-40 whitespace-nowrap px-4 py-3">
+                        <div>{formatDateTime(order.deleted_at)}</div>
+                        <div className="text-xs text-slate-500">by {order.deleted_by_name}</div>
+                      </td>
+                      <td className="min-w-64 px-4 py-3">
+                        <textarea
+                          aria-label={`Note for ${formatSalesOrderNumber(order.order_number)}`}
+                          value={order.note ?? ""}
+                          maxLength={2000}
+                          rows={2}
+                          onChange={(event) => setDeletedOrders((current) => current.map((item) =>
+                            item.id === order.id ? { ...item, note: event.target.value } : item,
+                          ))}
+                          className="w-full rounded-lg border border-slate-300 px-2.5 py-2"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void saveDeletedOrderNote(order)}
+                          disabled={savingDeletedOrderId !== null}
+                          className="mt-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                        >
+                          {savingDeletedOrderId === order.id ? "Saving..." : "Save note"}
+                        </button>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+                        No deleted sales orders yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {!loadingDeletedOrders && deletedOrdersTotalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
+              <span className="text-sm text-slate-500">
+                Page {deletedOrdersPage} of {deletedOrdersTotalPages}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletedOrdersPage((current) => Math.max(1, current - 1))}
+                  disabled={deletedOrdersPage <= 1}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeletedOrdersPage((current) => Math.min(deletedOrdersTotalPages, current + 1))}
+                  disabled={deletedOrdersPage >= deletedOrdersTotalPages}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
                 >
                   Next

@@ -378,6 +378,19 @@ export async function DELETE(
   try {
     const { id } = await params;
     const orderId = parseId(id);
+    const requestBody = await request.text();
+    const body: unknown = requestBody ? JSON.parse(requestBody) : {};
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json({ error: "Request body must be an object" }, { status: 400 });
+    }
+    const noteValue = (body as Record<string, unknown>).note;
+    if (noteValue !== undefined && noteValue !== null && typeof noteValue !== "string") {
+      return NextResponse.json({ error: "note must be a string" }, { status: 400 });
+    }
+    const deletionNote = typeof noteValue === "string" ? noteValue.trim() : null;
+    if (deletionNote !== null && deletionNote.length > 2000) {
+      return NextResponse.json({ error: "note must be 2000 characters or fewer" }, { status: 400 });
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.$queryRaw<Array<{ order_id: number }>>`
@@ -385,7 +398,27 @@ export async function DELETE(
       `;
       const order = await tx.salesOrder.findUnique({
         where: { order_id: orderId },
-        include: { details: true },
+        include: {
+          salesperson: { select: { staff_name: true } },
+          sourceWarehouse: { select: { warehouse_name: true } },
+          sourceVehicle: { select: { vehicle_name: true } },
+          details: {
+            include: {
+              product: {
+                select: {
+                  product_name: true,
+                  type: true,
+                  size: true,
+                  unit: true,
+                },
+              },
+            },
+          },
+          payments: {
+            orderBy: { paid_at: "asc" },
+            include: { recordedBy: { select: { staff_name: true } } },
+          },
+        },
       });
 
       if (!order) {
@@ -425,6 +458,41 @@ export async function DELETE(
           });
         }
       }
+
+      await tx.deletedSalesOrder.create({
+        data: {
+          order_id: order.order_id,
+          order_number: order.order_number,
+          deleted_by_name: staff.staff_name,
+          note: deletionNote,
+          order_snapshot: {
+            customer_name: order.customer_name,
+            order_date: order.order_date.toISOString(),
+            salesperson_name: order.salesperson.staff_name,
+            source_location: order.sourceWarehouse?.warehouse_name ??
+              order.sourceVehicle?.vehicle_name ?? "Unknown",
+            discount_amount: order.discount_amount,
+            tax_rate: order.tax_rate,
+            total_amount: order.total_amount,
+            is_paid: order.is_paid,
+            items: order.details.map((item) => ({
+              product_id: item.product_id,
+              product_name: item.product.product_name,
+              type: item.product.type,
+              size: item.product.size,
+              unit: item.product.unit,
+              quantity_sold: item.quantity_sold,
+              sold_at_price: item.sold_at_price,
+            })),
+            payments: order.payments.map((payment) => ({
+              amount: payment.amount,
+              paid_at: payment.paid_at.toISOString(),
+              note: payment.note,
+              recorded_by: payment.recordedBy?.staff_name ?? null,
+            })),
+          },
+        },
+      });
 
       await tx.salesOrderPayment.deleteMany({ where: { order_id: orderId } });
       await tx.salesOrderDetail.deleteMany({ where: { order_id: orderId } });

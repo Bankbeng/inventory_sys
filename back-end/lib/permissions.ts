@@ -77,6 +77,9 @@ export function pagesForApi(path: string, method: string): string[] | null {
   if (path.startsWith("/api/sales-orders/") && path.includes("/payments")) {
     return ["/accounts-receivable"];
   }
+  if (path.startsWith("/api/deleted-sales-orders")) {
+    return ["/sales-management"];
+  }
   if (path.startsWith("/api/acknowledgements")) {
     return ["/transactions"];
   }
