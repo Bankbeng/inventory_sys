@@ -103,7 +103,7 @@ export default function AccountsReceivablePage() {
   const [paymentNotes, setPaymentNotes] = useState<Record<number, string>>({});
   const [showSettledOrders, setShowSettledOrders] = useState(false);
   const [reportGroupBy, setReportGroupBy] = useState<"salesperson" | "customer">("salesperson");
-  const [reportEntity, setReportEntity] = useState("all");
+  const [reportEntity, setReportEntity] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [printTimestamp, setPrintTimestamp] = useState<number | null>(null);
   const [printRequestId, setPrintRequestId] = useState(0);
@@ -232,7 +232,7 @@ export default function AccountsReceivablePage() {
                 value={reportGroupBy}
                 onChange={(event) => {
                   setReportGroupBy(event.target.value as "salesperson" | "customer");
-                  setReportEntity("all");
+                  setReportEntity("");
                 }}
                 className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
               >
@@ -248,6 +248,9 @@ export default function AccountsReceivablePage() {
                 onChange={(event) => setReportEntity(event.target.value)}
                 className="min-w-48 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900"
               >
+                <option value="" disabled>
+                  Select {reportGroupBy === "salesperson" ? "salesperson" : "customer"}
+                </option>
                 <option value="all">
                   All {reportGroupBy === "salesperson" ? "salespeople" : "customers"}
                 </option>
@@ -263,7 +266,7 @@ export default function AccountsReceivablePage() {
                   setPrintTimestamp(Date.now());
                   setPrintRequestId((current) => current + 1);
                 }}
-                disabled={loading || visibleReportGroups.length === 0}
+                disabled={loading || reportEntity === "" || visibleReportGroups.length === 0}
                 className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Print report
@@ -285,6 +288,10 @@ export default function AccountsReceivablePage() {
             </div>
             {loading ? (
               <p className="py-5 text-sm text-slate-500">Loading report...</p>
+            ) : reportEntity === "" ? (
+              <p className="py-5 text-sm text-slate-500">
+                Select a {reportGroupBy} to view the report, or choose All to view every {reportGroupBy}.
+              </p>
             ) : visibleReportGroups.length === 0 ? (
               <p className="py-5 text-sm text-slate-500">
                 {reportEntity === "all"

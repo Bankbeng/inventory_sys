@@ -131,6 +131,7 @@ export default function SalesPage() {
   const [vehicleStocks, setVehicleStocks] = useState<ProductStock[]>([]);
   const [orderDateFrom, setOrderDateFrom] = useState<string | null>(null);
   const [orderDateTo, setOrderDateTo] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -151,6 +152,13 @@ export default function SalesPage() {
         page: String(page),
         pageSize: "50",
       });
+      if (sourceFilter !== "all") {
+        const [sourceType, sourceId = ""] = sourceFilter.split(":");
+        salesParams.set(
+          sourceType === "warehouse" ? "sourceWarehouseId" : "sourceVehicleId",
+          sourceId,
+        );
+      }
       if (orderDateFrom) {
         salesParams.set("dateFrom", orderDateFrom);
         salesParams.set(
@@ -254,7 +262,7 @@ export default function SalesPage() {
       setLoading(false);
       setStockLoading(false);
     }
-  }, [page, orderDateFrom, orderDateTo]);
+  }, [page, orderDateFrom, orderDateTo, sourceFilter]);
 
   useEffect(() => {
     if (orderDateFrom === null && orderDateTo === null) {
@@ -687,6 +695,33 @@ export default function SalesPage() {
         </form>
 
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <label className="text-sm font-medium text-slate-700">
+            <span className="mb-2 block">Source</span>
+            <select
+              value={sourceFilter}
+              onChange={(event) => {
+                setSourceFilter(event.target.value);
+                setPage(1);
+              }}
+              className="min-w-52 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
+            >
+              <option value="all">All sources</option>
+              <optgroup label="Warehouses">
+                {warehouses.map((warehouse) => (
+                  <option key={warehouse.warehouse_id} value={`warehouse:${warehouse.warehouse_id}`}>
+                    {warehouse.warehouse_name}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Vehicles">
+                {vehicles.map((vehicle) => (
+                  <option key={vehicle.vehicle_id} value={`vehicle:${vehicle.vehicle_id}`}>
+                    {vehicle.vehicle_name}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </label>
           <label className="text-sm font-medium text-slate-700">
             <span className="mb-2 block">From</span>
             <input

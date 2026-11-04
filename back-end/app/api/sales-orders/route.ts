@@ -19,11 +19,16 @@ export async function GET(request: Request) {
     const dateToValue = url.searchParams.get("dateTo") ?? url.searchParams.get("date");
     const timezoneOffsetFromValue = url.searchParams.get("timezoneOffsetFrom") ?? url.searchParams.get("timezoneOffset");
     const timezoneOffsetToValue = url.searchParams.get("timezoneOffsetTo") ?? url.searchParams.get("timezoneOffset");
+    const sourceWarehouseIdValue = url.searchParams.get("sourceWarehouseId");
+    const sourceVehicleIdValue = url.searchParams.get("sourceVehicleId");
     const isPaginated = pageValue !== null || pageSizeValue !== null || search !== "" ||
-      dateFromValue !== null || dateToValue !== null;
+      dateFromValue !== null || dateToValue !== null ||
+      sourceWarehouseIdValue !== null || sourceVehicleIdValue !== null;
     const page = pageValue === null ? 1 : Number(pageValue);
     const pageSize = pageSizeValue === null ? 50 : Number(pageSizeValue);
     const orderNumberSearch = search.replace(/^SO-/i, "").trim();
+    const sourceWarehouseId = sourceWarehouseIdValue === null ? null : Number(sourceWarehouseIdValue);
+    const sourceVehicleId = sourceVehicleIdValue === null ? null : Number(sourceVehicleIdValue);
 
     if (
       isPaginated &&
@@ -32,6 +37,19 @@ export async function GET(request: Request) {
     ) {
       return NextResponse.json(
         { error: "page must be a positive integer and pageSize must be between 1 and 100" },
+        { status: 400, headers: corsHeaders },
+      );
+    }
+
+    if (
+      (sourceWarehouseIdValue !== null &&
+        (!Number.isInteger(sourceWarehouseId) || sourceWarehouseId <= 0)) ||
+      (sourceVehicleIdValue !== null &&
+        (!Number.isInteger(sourceVehicleId) || sourceVehicleId <= 0)) ||
+      (sourceWarehouseIdValue !== null && sourceVehicleIdValue !== null)
+    ) {
+      return NextResponse.json(
+        { error: "Provide only one valid positive sourceWarehouseId or sourceVehicleId" },
         { status: 400, headers: corsHeaders },
       );
     }
@@ -93,6 +111,12 @@ export async function GET(request: Request) {
       conditions.push({
         order_date: orderDate,
       });
+    }
+    if (sourceWarehouseId !== null) {
+      conditions.push({ source_warehouse_id: sourceWarehouseId });
+    }
+    if (sourceVehicleId !== null) {
+      conditions.push({ source_vehicle_id: sourceVehicleId });
     }
 
     const where: Prisma.SalesOrderWhereInput | undefined = conditions.length
