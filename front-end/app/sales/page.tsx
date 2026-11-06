@@ -642,7 +642,7 @@ export default function SalesPage() {
                 </label>
 
                 <label className="text-sm text-slate-700">
-                  <span className="mb-2 block">Quantity</span>
+                  <span className="mb-2 block">ຈຳນວນ</span>
                   <input
                     type="number"
                     min="1"
@@ -669,7 +669,7 @@ export default function SalesPage() {
                   </label>
                   {line.priceEntry === "total" && (
                     <p className="mt-1 text-xs text-slate-500">
-                      Unit price: {getSaleLineUnitPrice(line).toFixed(6).replace(/\.?0+$/, "")}
+                      ລາຄາຕໍ່ໜ່ວຍ: {getSaleLineUnitPrice(line).toFixed(6).replace(/\.?0+$/, "")}
                     </p>
                   )}
                   <button
@@ -688,7 +688,7 @@ export default function SalesPage() {
                     disabled={form.lines.length === 1}
                     className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Remove
+                    ລົບ
                   </button>
                 </div>
               </div>
@@ -702,7 +702,7 @@ export default function SalesPage() {
               onClick={addLine}
               className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
             >
-              Add item
+              ເພີ່ມລາຍການສິນຄ້າ
             </button>
 
             <div className="grid gap-3 sm:grid-cols-[minmax(12rem,1fr)_auto] sm:items-end">
