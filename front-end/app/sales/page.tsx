@@ -68,6 +68,8 @@ type SaleLine = {
   productId: string;
   quantity: string;
   price: string;
+  lineTotal: string;
+  priceEntry: "unit" | "total";
 };
 
 type SaleForm = {
@@ -84,6 +86,8 @@ const buildEmptyLine = (): SaleLine => ({
   productId: "",
   quantity: "1",
   price: "0",
+  lineTotal: "0",
+  priceEntry: "unit",
 });
 
 const initialForm: SaleForm = {
@@ -119,6 +123,22 @@ function getLocalDateValue(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function getSaleLineTotal(line: SaleLine) {
+  const quantity = Number(line.quantity) || 0;
+  const amount = Number(line.priceEntry === "total" ? line.lineTotal : line.price) || 0;
+  return line.priceEntry === "total" ? amount : quantity * amount;
+}
+
+function getSaleLineUnitPrice(line: SaleLine) {
+  if (line.priceEntry === "unit") {
+    return Number(line.price) || 0;
+  }
+
+  const quantity = Number(line.quantity);
+  const lineTotal = Number(line.lineTotal);
+  return quantity > 0 && Number.isFinite(lineTotal) ? lineTotal / quantity : 0;
 }
 
 export default function SalesPage() {
@@ -297,12 +317,7 @@ export default function SalesPage() {
   );
 
   const totalValue = useMemo(
-    () =>
-      form.lines.reduce((sum, line) => {
-        const quantity = Number(line.quantity) || 0;
-        const price = Number(line.price) || 0;
-        return sum + quantity * price;
-      }, 0),
+    () => form.lines.reduce((sum, line) => sum + getSaleLineTotal(line), 0),
     [form.lines],
   );
   const discountValue = Number(form.discountAmount);
@@ -331,17 +346,45 @@ export default function SalesPage() {
           productId: nextProduct ? String(nextProduct.product_id) : "",
           quantity: "1",
           price: nextProduct ? String(nextProduct.retail_price) : "0",
+          lineTotal: nextProduct ? String(nextProduct.retail_price) : "0",
+          priceEntry: "unit",
         },
       ],
     }));
   };
 
-  const updateLine = (index: number, field: keyof SaleLine, value: string) => {
+  const updateLine = (index: number, field: "quantity" | "price" | "lineTotal", value: string) => {
     setForm((current) => ({
       ...current,
       lines: current.lines.map((line, lineIndex) =>
         lineIndex === index ? { ...line, [field]: value } : line,
       ),
+    }));
+  };
+
+  const toggleLinePriceEntry = (index: number) => {
+    setForm((current) => ({
+      ...current,
+      lines: current.lines.map((line, lineIndex) => {
+        if (lineIndex !== index) {
+          return line;
+        }
+
+        if (line.priceEntry === "unit") {
+          const quantity = Number(line.quantity) || 0;
+          return {
+            ...line,
+            priceEntry: "total",
+            lineTotal: String(quantity * (Number(line.price) || 0)),
+          };
+        }
+
+        return {
+          ...line,
+          priceEntry: "unit",
+          price: String(getSaleLineUnitPrice(line)),
+        };
+      }),
     }));
   };
 
@@ -358,8 +401,8 @@ export default function SalesPage() {
     const validLines = form.lines.filter((line) => {
       const productId = Number(line.productId);
       const quantity = Number(line.quantity);
-      const price = Number(line.price);
-      return Number.isInteger(productId) && productId > 0 && Number.isFinite(quantity) && quantity > 0 && Number.isFinite(price) && price >= 0;
+      const amount = Number(line.priceEntry === "total" ? line.lineTotal : line.price);
+      return Number.isInteger(productId) && productId > 0 && Number.isInteger(quantity) && quantity > 0 && Number.isFinite(amount) && amount >= 0;
     });
 
     if (!form.customerId) {
@@ -397,7 +440,7 @@ export default function SalesPage() {
         items: validLines.map((line) => ({
           product_id: Number(line.productId),
           quantity_sold: Number(line.quantity),
-          sold_at_price: Number(line.price),
+          sold_at_price: getSaleLineUnitPrice(line),
         })),
       };
 
@@ -545,7 +588,7 @@ export default function SalesPage() {
               const remainingAfterSale = availableStock === null ? null : availableStock - orderQuantity;
 
               return (
-              <div key={index} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.5fr_0.8fr_0.9fr_auto]">
+              <div key={index} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.5fr_0.8fr_1fr_auto]">
                 <label className="text-sm text-slate-700">
                   <SearchableSelect
                     label="Product"
@@ -564,6 +607,10 @@ export default function SalesPage() {
                                 ...currentLine,
                                 productId,
                                 price: nextProduct ? String(nextProduct.retail_price) : "0",
+                                lineTotal: String(
+                                  (Number(currentLine.quantity) || 0) *
+                                    (nextProduct ? nextProduct.retail_price : 0),
+                                ),
                               }
                             : currentLine,
                         ),
@@ -599,23 +646,40 @@ export default function SalesPage() {
                   <input
                     type="number"
                     min="1"
+                    step="1"
                     value={line.quantity}
                     onChange={(event) => updateLine(index, "quantity", event.target.value)}
                     className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
                   />
                 </label>
 
-                <label className="text-sm text-slate-700">
-                  <span className="mb-2 block">Unit price</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={line.price}
-                    onChange={(event) => updateLine(index, "price", event.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
-                  />
-                </label>
+                <div>
+                  <label className="block text-sm text-slate-700">
+                    <span className="mb-2 block">{line.priceEntry === "unit" ? "Unit price" : "Total amount"}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={line.priceEntry === "unit" ? line.price : line.lineTotal}
+                      onChange={(event) =>
+                        updateLine(index, line.priceEntry === "unit" ? "price" : "lineTotal", event.target.value)
+                      }
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-cyan-400"
+                    />
+                  </label>
+                  {line.priceEntry === "total" && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      Unit price: {getSaleLineUnitPrice(line).toFixed(6).replace(/\.?0+$/, "")}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => toggleLinePriceEntry(index)}
+                    className="mt-1 text-xs font-medium text-cyan-700 underline"
+                  >
+                    {line.priceEntry === "unit" ? "ໃສ່ລາຄາລວມແທນ" : "ໃສ່ລາຄາຕໍ່ໜ່ວຍແທນ"}
+                  </button>
+                </div>
 
                 <div className="flex items-end">
                   <button

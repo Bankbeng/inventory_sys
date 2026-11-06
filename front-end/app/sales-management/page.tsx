@@ -100,6 +100,8 @@ type SaleLine = {
   productId: string;
   quantity: string;
   price: string;
+  lineTotal: string;
+  priceEntry: "unit" | "total";
 };
 
 type SaleForm = {
@@ -111,13 +113,35 @@ type SaleForm = {
   lines: SaleLine[];
 };
 
-const emptyLine = (): SaleLine => ({ productId: "", quantity: "1", price: "0" });
+const emptyLine = (): SaleLine => ({
+  productId: "",
+  quantity: "1",
+  price: "0",
+  lineTotal: "0",
+  priceEntry: "unit",
+});
 
 function getProductLabel(product: Pick<Product, "product_name" | "type" | "size" | "unit">) {
   const attributes = [product.type, [product.size, product.unit].filter(Boolean).join(" ")]
     .filter(Boolean)
     .join(", ");
   return attributes ? `${product.product_name} (${attributes})` : product.product_name;
+}
+
+function getSaleLineTotal(line: SaleLine) {
+  const quantity = Number(line.quantity) || 0;
+  const amount = Number(line.priceEntry === "total" ? line.lineTotal : line.price) || 0;
+  return line.priceEntry === "total" ? amount : quantity * amount;
+}
+
+function getSaleLineUnitPrice(line: SaleLine) {
+  if (line.priceEntry === "unit") {
+    return Number(line.price) || 0;
+  }
+
+  const quantity = Number(line.quantity);
+  const lineTotal = Number(line.lineTotal);
+  return quantity > 0 && Number.isFinite(lineTotal) ? lineTotal / quantity : 0;
 }
 
 export default function SalesManagementPage() {
@@ -258,10 +282,7 @@ export default function SalesManagementPage() {
     [products],
   );
   const sourceOptions = form.sourceType === "warehouse" ? warehouses : vehicles;
-  const subtotal = form.lines.reduce(
-    (sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.price) || 0),
-    0,
-  );
+  const subtotal = form.lines.reduce((sum, line) => sum + getSaleLineTotal(line), 0);
   const discountValue = Number(form.discountAmount);
   const taxableAmount = Math.max(0, subtotal - (Number.isFinite(discountValue) ? discountValue : 0));
   const taxAmount = form.includeTax ? Math.round((taxableAmount * 0.1 + Number.EPSILON) * 100) / 100 : 0;
@@ -280,6 +301,8 @@ export default function SalesManagementPage() {
         productId: String(detail.product_id),
         quantity: String(detail.quantity_sold),
         price: String(detail.sold_at_price),
+        lineTotal: String(detail.quantity_sold * detail.sold_at_price),
+        priceEntry: "unit",
       })),
     });
     setMessage(null);
@@ -300,12 +323,38 @@ export default function SalesManagementPage() {
     setMessage(null);
   }
 
-  function updateLine(index: number, field: keyof SaleLine, value: string) {
+  function updateLine(index: number, field: "quantity" | "price" | "lineTotal", value: string) {
     setForm((current) => ({
       ...current,
       lines: current.lines.map((line, lineIndex) =>
         lineIndex === index ? { ...line, [field]: value } : line,
       ),
+    }));
+  }
+
+  function toggleLinePriceEntry(index: number) {
+    setForm((current) => ({
+      ...current,
+      lines: current.lines.map((line, lineIndex) => {
+        if (lineIndex !== index) {
+          return line;
+        }
+
+        if (line.priceEntry === "unit") {
+          const quantity = Number(line.quantity) || 0;
+          return {
+            ...line,
+            priceEntry: "total",
+            lineTotal: String(quantity * (Number(line.price) || 0)),
+          };
+        }
+
+        return {
+          ...line,
+          priceEntry: "unit",
+          price: String(getSaleLineUnitPrice(line)),
+        };
+      }),
     }));
   }
 
@@ -326,10 +375,10 @@ export default function SalesManagementPage() {
     if (form.lines.length === 0 || form.lines.some((line) => {
       const productId = Number(line.productId);
       const quantity = Number(line.quantity);
-      const price = Number(line.price);
+      const amount = Number(line.priceEntry === "total" ? line.lineTotal : line.price);
       return !Number.isInteger(productId) || productId <= 0 ||
         !Number.isInteger(quantity) || quantity <= 0 ||
-        !Number.isFinite(price) || price < 0;
+        !Number.isFinite(amount) || amount < 0;
     })) {
       setError("Each item needs a product, a positive whole-number quantity, and a valid price.");
       return;
@@ -356,7 +405,7 @@ export default function SalesManagementPage() {
           items: form.lines.map((line) => ({
             product_id: Number(line.productId),
             quantity_sold: Number(line.quantity),
-            sold_at_price: Number(line.price),
+            sold_at_price: getSaleLineUnitPrice(line),
           })),
         }),
       });
@@ -549,7 +598,7 @@ export default function SalesManagementPage() {
                   : 0;
 
                 return (
-                  <div key={index} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-[1.5fr_0.7fr_0.8fr_auto]">
+                  <div key={index} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-[1.5fr_0.7fr_1fr_auto]">
                     <div>
                       <SearchableSelect
                         label="Product"
@@ -561,7 +610,15 @@ export default function SalesManagementPage() {
                             ...current,
                             lines: current.lines.map((item, lineIndex) =>
                               lineIndex === index
-                                ? { ...item, productId, price: product ? String(product.retail_price) : "0" }
+                                ? {
+                                    ...item,
+                                    productId,
+                                    price: product ? String(product.retail_price) : "0",
+                                    lineTotal: String(
+                                      (Number(item.quantity) || 0) *
+                                        (product ? product.retail_price : 0),
+                                    ),
+                                  }
                                 : item,
                             ),
                           }));
@@ -587,17 +644,33 @@ export default function SalesManagementPage() {
                         className="w-full rounded-xl border border-slate-300 px-3 py-2.5"
                       />
                     </label>
-                    <label className="text-sm text-slate-700">
-                      <span className="mb-2 block">Unit price</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={line.price}
-                        onChange={(event) => updateLine(index, "price", event.target.value)}
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2.5"
-                      />
-                    </label>
+                    <div>
+                      <label className="block text-sm text-slate-700">
+                        <span className="mb-2 block">{line.priceEntry === "unit" ? "Unit price" : "Total amount"}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={line.priceEntry === "unit" ? line.price : line.lineTotal}
+                          onChange={(event) =>
+                            updateLine(index, line.priceEntry === "unit" ? "price" : "lineTotal", event.target.value)
+                          }
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2.5"
+                        />
+                      </label>
+                      {line.priceEntry === "total" && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          Unit price: {getSaleLineUnitPrice(line).toFixed(6).replace(/\.?0+$/, "")}
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => toggleLinePriceEntry(index)}
+                        className="mt-1 text-xs font-medium text-cyan-700 underline"
+                      >
+                        {line.priceEntry === "unit" ? "Enter total instead" : "Enter unit price instead"}
+                      </button>
+                    </div>
                     <div className="flex items-end">
                       <button
                         type="button"
