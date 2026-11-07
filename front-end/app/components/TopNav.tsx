@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import BrandMark from "./BrandMark";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard", label: "ລາຍງານລວມ" },
   { href: "/stock", label: "ຂົນຍ້າຍ" },
   { href: "/stock-remaining", label: "ເຄື່ອງຍັງເຫຼືອ" },
   { href: "/products", label: "ສິນຄ້າ" },
@@ -17,7 +17,7 @@ const navItems = [
   { href: "/sales", label: "ຂາຍ" },
   { href: "/sales-management", label: "Manage sales orders" },
   { href: "/accounts-receivable", label: "ໜີ້ຕ້ອງຮັບ" },
-  { href: "/sales-kpi", label: "ຍອດຂາຍ" },
+  { href: "/sales-kpi", label: "ຍອດຂາຍພະນັກງານ" },
   { href: "/transactions", label: "ປະຫວັດ" },
 ];
 
