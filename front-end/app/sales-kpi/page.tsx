@@ -218,7 +218,7 @@ export default function SalesKpiPage() {
 
             <section aria-label="Sales summary" className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Total sales</p>
+                <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">ຍອດຂາຍທັງໝົດ</p>
                 <p className="mt-3 text-2xl font-semibold tracking-tight text-teal-900">{reportIsReady ? formatCurrency(reportSalesTotal) : "--"}</p>
                 <p className="mt-1 text-xs text-slate-500">
                   Across {reportIsReady ? periodOrders.length : "--"} orders

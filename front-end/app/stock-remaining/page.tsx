@@ -174,7 +174,7 @@ export default function RemainingStockPage() {
           {!loading && !error && (
             <div className="flex flex-wrap items-end gap-3">
               <label className="text-sm text-slate-700">
-                <span className="mb-2 block">Search</span>
+                <span className="mb-2 block">ຄົ້ນຫາ</span>
                 <input
                   type="text"
                   value={searchQuery}
@@ -184,26 +184,26 @@ export default function RemainingStockPage() {
                 />
               </label>
               <label className="text-sm text-slate-700">
-                <span className="mb-2 block">Category</span>
+                <span className="mb-2 block">ປະເພດສິນຄ້າ</span>
                 <select
                   value={selectedCategory}
                   onChange={(event) => setSelectedCategory(event.target.value)}
                   className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 >
-                  <option value="all">All categories</option>
+                  <option value="all">ທຸກປະເພດສິນຄ້າ</option>
                   {categories.map((category) => <option key={category} value={category}>{category}</option>)}
                 </select>
               </label>
               <label className="text-sm text-slate-700">
-                <span className="mb-2 block">Display by</span>
+                <span className="mb-2 block">ສະແດງອີງຕາມ</span>
                 <select
                   value={displayMode}
                   onChange={(event) => setDisplayMode(event.target.value as StockDisplayMode)}
                   className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
                 >
-                  <option value="product">Product</option>
-                  <option value="warehouse">Warehouse</option>
-                  <option value="vehicle">Vehicle</option>
+                  <option value="product">ສິນຄ້າ</option>
+                  <option value="warehouse">ສາງ</option>
+                  <option value="vehicle">ລົດ</option>
                 </select>
               </label>
             </div>

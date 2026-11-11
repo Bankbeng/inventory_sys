@@ -163,7 +163,7 @@ export default function DashboardPage() {
             <section aria-labelledby="sales-total-heading" className="border-y border-slate-300 py-6">
               <div className="flex flex-wrap items-end justify-between gap-5">
                 <div>
-                  <h2 id="sales-total-heading" className="text-sm font-medium text-slate-600">Sales total</h2>
+                  <h2 id="sales-total-heading" className="text-sm font-medium text-slate-600">ຍອດຂາຍທັງໝົດ</h2>
                   <p className="mt-2 text-4xl font-semibold tracking-tight text-teal-800 sm:text-5xl">
                     {salesPeriod === "range" && !validDateRange ? "--" : formatCurrency(totalSales)}
                   </p>
@@ -172,7 +172,7 @@ export default function DashboardPage() {
                   <p className="pb-1 text-sm text-slate-500">{salesTotalMessage}</p>
                   <div className="flex flex-wrap items-end gap-3">
                     <fieldset>
-                      <legend className="mb-1.5 text-xs font-medium text-slate-500">Period</legend>
+                      <legend className="mb-1.5 text-xs font-medium text-slate-500">ໄລຍະເວລາ</legend>
                       <div className="inline-flex rounded-md border border-slate-300 p-0.5" aria-label="Sales total period">
                         {(["all", "range"] as const).map((period) => (
                           <button
@@ -221,11 +221,11 @@ export default function DashboardPage() {
 
             <section aria-labelledby="category-sales-heading" className="border-b border-slate-300 py-6">
               <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-                <h2 id="category-sales-heading" className="text-lg font-semibold text-slate-950">Sales by product category</h2>
-                <p className="text-xs text-slate-500">Based on sold quantities and unit prices</p>
+                <h2 id="category-sales-heading" className="text-lg font-semibold text-slate-950">ຍອດຂາຍແຕ່ລະປະເພດສິນຄ້າ</h2>
+                <p className="text-xs text-slate-500">ອີງຕາມຈຳນວນ ແລະ ລາຄາທີ່ຂາຍ</p>
               </div>
               {salesPeriod === "range" && !validDateRange ? (
-                <p className="py-4 text-sm text-slate-500">Select a valid date range to see category sales.</p>
+                <p className="py-4 text-sm text-slate-500">ເລືອກໄລຍະເວລາເພື່ອເບິ່ງຍອດຂາຍຕາມປະເພດສິນຄ້າ</p>
               ) : categorySales.length > 0 ? (
                 <div className="divide-y divide-slate-200 border-y border-slate-200">
                   {categorySales.map(({ category, amount }) => {
@@ -251,7 +251,7 @@ export default function DashboardPage() {
 
             <section aria-labelledby="product-sales-heading" className="border-b border-slate-300 py-6">
               <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-                <h2 id="product-sales-heading" className="text-lg font-semibold text-slate-950">Sales by product</h2>
+                <h2 id="product-sales-heading" className="text-lg font-semibold text-slate-950">ຍອດຂາຍຂອງສິນຄ້າແຕ່ລະອັນ</h2>
                 <p className="text-xs text-slate-500">Ranked by revenue · quantity sold in the selected period</p>
               </div>
               {salesPeriod === "range" && !validDateRange ? (
@@ -262,10 +262,10 @@ export default function DashboardPage() {
                     <thead className="border-b border-slate-200 text-xs text-slate-500 uppercase">
                       <tr>
                         <th scope="col" className="w-16 py-3 pr-4 font-medium">Rank</th>
-                        <th scope="col" className="py-3 pr-4 font-medium">Product</th>
-                        <th scope="col" className="py-3 pr-4 font-medium">Category</th>
-                        <th scope="col" className="py-3 pr-4 text-right font-medium">Qty sold</th>
-                        <th scope="col" className="py-3 text-right font-medium">Revenue</th>
+                        <th scope="col" className="py-3 pr-4 font-medium">ສິນຄ້າ</th>
+                        <th scope="col" className="py-3 pr-4 font-medium">ປະເພດ</th>
+                        <th scope="col" className="py-3 pr-4 text-right font-medium">ຈຳນວນທີ່ຂາຍ</th>
+                        <th scope="col" className="py-3 text-right font-medium">ຍອດທີ່ຂາຍໄດ້</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">

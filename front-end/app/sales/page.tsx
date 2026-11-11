@@ -500,7 +500,7 @@ export default function SalesPage() {
               />
               {customers.length === 0 && (
                 <span className="mt-1 block text-xs text-slate-500">
-                  No customers yet. <a href="/customers" className="text-cyan-700 underline">Add a customer</a>.
+                  No customers yet. <a href="/customers" className="text-cyan-700 underline">ເລືອກລູກຄ້າ</a>.
                 </span>
               )}
             </label>
@@ -655,7 +655,7 @@ export default function SalesPage() {
 
                 <div>
                   <label className="block text-sm text-slate-700">
-                    <span className="mb-2 block">{line.priceEntry === "unit" ? "Unit price" : "Total amount"}</span>
+                    <span className="mb-2 block">{line.priceEntry === "unit" ? "ລາຄາຕໍ່ໜ່ວຍ" : "ລາຄາລວມ"}</span>
                     <input
                       type="number"
                       min="0"
@@ -707,7 +707,7 @@ export default function SalesPage() {
 
             <div className="grid gap-3 sm:grid-cols-[minmax(12rem,1fr)_auto] sm:items-end">
               <label className="text-sm text-slate-700">
-                <span className="mb-2 block">Discount amount</span>
+                <span className="mb-2 block">ສ່ວນຫຼຸດ</span>
                 <input
                   type="number"
                   min="0"
@@ -751,7 +751,7 @@ export default function SalesPage() {
               disabled={saving}
               className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {saving ? "Recording sale..." : "Create sale"}
+              {saving ? "Recording sale..." : "ສ້າງການຂາຍ"}
             </button>
           </div>
 
