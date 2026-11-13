@@ -446,11 +446,11 @@ textarea {
   }
 
   .invoice-meta dt {
-    font-size: 6.5pt;
+    font-size: 8.5pt;
   }
 
   .invoice-meta dd {
-    font-size: 7.5pt;
+    font-size: 9.5pt;
     overflow-wrap: anywhere;
   }
 
@@ -465,7 +465,39 @@ textarea {
   .invoice-items {
     table-layout: fixed;
     min-width: 0;
-    font-size: 7.5pt;
+    font-size: 8.5pt;
+  }
+
+  .invoice-items thead th:nth-child(1) {
+    width: 4%;
+  }
+
+  .invoice-items thead th:nth-child(2) {
+    width: 34%;
+  }
+
+  .invoice-items thead th:nth-child(3) {
+    width: 10%;
+  }
+
+  .invoice-items thead th:nth-child(4) {
+    width: 7%;
+  }
+
+  .invoice-items thead th:nth-child(5) {
+    width: 10%;
+  }
+
+  .invoice-items thead th:nth-child(6) {
+    width: 7%;
+  }
+
+  .invoice-items thead th:nth-child(7) {
+    width: 13%;
+  }
+
+  .invoice-items thead th:nth-child(8) {
+    width: 15%;
   }
 
   .invoice-items thead {
@@ -486,7 +518,7 @@ textarea {
   }
 
   .invoice-items td:nth-child(2) {
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
   }
 
   .invoice-quantity-pack,
