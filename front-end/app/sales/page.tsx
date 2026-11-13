@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
+import { formatStockQuantity, getUnitsPerPack } from "@/lib/stock-units";
 import { formatDate } from "@/lib/date";
 import { formatSalesOrderNumber } from "@/lib/order-number";
 import BrandMark from "../components/BrandMark";
@@ -631,9 +632,9 @@ export default function SalesPage() {
                         ? "Loading stock..."
                         : stockError
                           ? stockError
-                          : availableStock === null
+                          : availableStock === null || remainingAfterSale === null
                             ? "Select a source to see stock."
-                            : `Available: ${availableStock} ${selectedProduct.unit || "units"} · After this order: ${remainingAfterSale} ${selectedProduct.unit || "units"}`}
+                            : `Available: ${formatStockQuantity(availableStock, selectedProduct.size, selectedProduct.unit)} · After this order: ${formatStockQuantity(remainingAfterSale, selectedProduct.size, selectedProduct.unit)}`}
                       {!stockLoading && !stockError && remainingAfterSale !== null && remainingAfterSale < 0
                         ? ` (short by ${Math.abs(remainingAfterSale)})`
                         : ""}
@@ -999,18 +1000,39 @@ export default function SalesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {invoiceDetails.map((detail, index) => (
+                    {invoiceDetails.map((detail, index) => {
+                      const unitsPerPack = getUnitsPerPack(detail.product?.size ?? "");
+                      const packCount = unitsPerPack
+                        ? Math.floor(detail.quantity_sold / unitsPerPack)
+                        : 0;
+                      const leftoverUnits = unitsPerPack
+                        ? detail.quantity_sold % unitsPerPack
+                        : 0;
+
+                      return (
                         <tr key={`${invoiceOrder.order_id}-${detail.product_id}`}>
                           <td>{index + 1}</td>
                           <td>{detail.product?.product_name ?? `Product ${detail.product_id}`}</td>
                           <td>{detail.product?.type || "—"}</td>
                           <td>{detail.product?.size || "—"}</td>
-                          <td>{detail.quantity_sold}</td>
+                          <td>
+                            {unitsPerPack ? (
+                              <>
+                                <span className="invoice-quantity-pack">
+                                  {packCount} ແກັດ{leftoverUnits > 0 ? ` + ${leftoverUnits}` : ""}
+                                </span>
+                                <span className="invoice-quantity-total">
+                                  {detail.quantity_sold} {detail.product?.unit || "units"} total
+                                </span>
+                              </>
+                            ) : detail.quantity_sold}
+                          </td>
                           <td>{detail.product?.unit || "—"}</td>
                           <td>{formatCurrency(Number(detail.sold_at_price))}</td>
                           <td>{formatCurrency(Number(detail.quantity_sold) * Number(detail.sold_at_price))}</td>
                         </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr>

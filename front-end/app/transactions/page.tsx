@@ -5,6 +5,7 @@ import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
 import { formatDateTime as formatDateTimeValue } from "@/lib/date";
 import { formatSalesOrderNumber } from "@/lib/order-number";
+import { formatStockQuantity } from "@/lib/stock-units";
 
 function getLocalDateValue(date: Date) {
   const year = date.getFullYear();
@@ -286,6 +287,11 @@ export default function TransactionsPage() {
   const getProductUnit = (productId: number): string =>
     products.find((product) => product.product_id === productId)?.unit ?? "";
 
+  const getStockQuantity = (productId: number, quantity: number): string => {
+    const product = products.find((item) => item.product_id === productId);
+    return formatStockQuantity(quantity, product?.size ?? "", product?.unit ?? "");
+  };
+
   const getTransactionDescription = (transaction: Transaction): string => {
     const staffName = transaction.staff?.staff_name ?? `ພະນັກງານ ${transaction.staff_id}`;
 
@@ -509,7 +515,7 @@ export default function TransactionsPage() {
                               {getProductName(detail.product_id)}
                             </p>
                             <p className="text-sm font-semibold text-emerald-800 sm:text-right">
-                              {detail.quantity}{getProductUnit(detail.product_id) ? ` ${getProductUnit(detail.product_id)}` : ""}
+                              {getStockQuantity(detail.product_id, detail.quantity)}
                             </p>
                           </div>
                         ))}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
 import { formatCurrency } from "@/lib/currency";
+import { formatStockQuantity } from "@/lib/stock-units";
 import { formatDate, formatDateTime } from "@/lib/date";
 import { formatSalesOrderNumber } from "@/lib/order-number";
 import SearchableSelect from "../components/SearchableSelect";
@@ -629,7 +630,7 @@ export default function SalesManagementPage() {
                         <p className={`mt-1 text-xs ${available !== null && requested > available ? "text-rose-700" : "text-slate-500"}`}>
                           {available === null
                             ? "Select a source to see stock."
-                            : `Available: ${available} ${selectedProduct.unit || "units"} · Remaining: ${available - requested}`}
+                            : `Available: ${formatStockQuantity(available, selectedProduct.size, selectedProduct.unit)} · Remaining: ${formatStockQuantity(available - requested, selectedProduct.size, selectedProduct.unit)}`}
                         </p>
                       )}
                     </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "@/lib/config";
+import { formatStockQuantity, getUnitsPerPack } from "@/lib/stock-units";
 import SearchableSelect from "../components/SearchableSelect";
 
 type Product = {
@@ -320,42 +321,60 @@ export default function StockPage() {
               </div>
 
               <div className="space-y-3">
-                {form.items.map((item, index) => (
-                  <div key={`item-${index}`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.5fr_0.7fr_auto]">
-                    <label className="text-sm text-slate-700">
-                      <SearchableSelect
-                        label="Product"
-                        options={productOptions}
-                        value={item.productId}
-                        onChange={(productId) => updateItemRow(index, "productId", productId)}
-                        placeholder="Search product name"
-                      />
-                    </label>
+                {form.items.map((item, index) => {
+                  const selectedProduct = products.find(
+                    (product) => String(product.product_id) === item.productId,
+                  );
+                  const quantity = Number(item.quantity);
+                  const packCountDisplay = selectedProduct &&
+                    getUnitsPerPack(selectedProduct.size) &&
+                    Number.isInteger(quantity) &&
+                    quantity >= 0
+                    ? formatStockQuantity(quantity, selectedProduct.size, selectedProduct.unit)
+                    : null;
 
-                    <label className="text-sm text-slate-700">
-                      <span className="mb-2 block">Quantity</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(event) => updateItemRow(index, "quantity", event.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
-                      />
-                    </label>
+                  return (
+                    <div key={`item-${index}`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.5fr_0.7fr_auto]">
+                      <label className="text-sm text-slate-700">
+                        <SearchableSelect
+                          label="Product"
+                          options={productOptions}
+                          value={item.productId}
+                          onChange={(productId) => updateItemRow(index, "productId", productId)}
+                          placeholder="Search product name"
+                        />
+                      </label>
 
-                    <div className="flex items-end">
-                      {form.items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeItemRow(index)}
-                          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100"
-                        >
-                          Remove
-                        </button>
-                      )}
+                      <label className="text-sm text-slate-700">
+                        <span className="mb-2 block">Quantity</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(event) => updateItemRow(index, "quantity", event.target.value)}
+                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-cyan-400"
+                        />
+                        {packCountDisplay && (
+                          <span className="mt-1 block text-xs text-slate-500">
+                            Pack view: {packCountDisplay}
+                          </span>
+                        )}
+                      </label>
+
+                      <div className="flex items-end">
+                        {form.items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItemRow(index)}
+                            className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

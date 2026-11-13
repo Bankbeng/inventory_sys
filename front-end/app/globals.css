@@ -257,6 +257,21 @@ textarea {
   text-align: left;
 }
 
+.invoice-quantity-pack,
+.invoice-quantity-total {
+  display: block;
+  white-space: nowrap;
+}
+
+.invoice-quantity-pack {
+  font-weight: 600;
+}
+
+.invoice-quantity-total {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
 .invoice-items tfoot th {
   border-top: 1px solid #0f172a;
   padding-top: 1rem;
