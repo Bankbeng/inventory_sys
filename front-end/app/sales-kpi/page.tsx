@@ -8,6 +8,7 @@ type SalesOrder = {
   total_amount: number;
   order_date: string;
   salesperson?: { staff_id: number; staff_name: string };
+  payments?: { amount: number }[];
   details?: {
     quantity_sold: number;
     sold_at_price: number;
@@ -20,6 +21,7 @@ type RankedSalesperson = {
   staffId: number;
   name: string;
   total: number;
+  creditOutstanding: number;
   categories: SalesCategory[];
 };
 type SalesPeriod = "all" | "range";
@@ -80,6 +82,13 @@ export default function SalesKpiPage() {
       staffId,
       name,
       total: (existing?.total ?? 0) + (order.total_amount ?? 0),
+      creditOutstanding: (existing?.creditOutstanding ?? 0) + Math.max(
+        0,
+        order.total_amount - (order.payments ?? []).reduce(
+          (paid, payment) => paid + (Number(payment.amount) || 0),
+          0,
+        ),
+      ),
       categories: [],
     });
 
@@ -251,14 +260,17 @@ export default function SalesKpiPage() {
                   <p className="text-xs font-semibold tracking-wide text-teal-700 uppercase">Leaderboard</p>
                   <h2 id="sales-rank-heading" className="mt-1 text-lg font-semibold text-slate-950">Sales by salesperson</h2>
                 </div>
-                <p className="text-xs text-slate-500">Ranked by sales total</p>
+                <p className="text-xs text-slate-500">Outstanding customer credit compared with sales</p>
               </div>
               {reportIsReady && rankedSalespeople.length > 0 ? (
                 <div className="space-y-4" role="list" aria-label="Sales totals chart">
                   {rankedSalespeople.map((person, index) => {
                     const share = topSalesTotal > 0 ? (person.total / topSalesTotal) * 100 : 0;
+                    const creditRatio = person.total > 0
+                      ? (person.creditOutstanding / person.total) * 100
+                      : 0;
                     return (
-                      <div key={person.staffId} className="grid gap-2 sm:grid-cols-[minmax(10rem,0.8fr)_2fr_auto] sm:items-center sm:gap-5" role="listitem">
+                      <div key={person.staffId} className="grid gap-2 sm:grid-cols-[minmax(9rem,0.8fr)_1.5fr_auto_auto] sm:items-center sm:gap-5" role="listitem">
                         <div className="flex min-w-0 items-center gap-3">
                           <span className={[
                             "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold",
@@ -281,7 +293,14 @@ export default function SalesKpiPage() {
                             style={{ width: `${share}%` }}
                           />
                         </div>
-                        <p className="text-right text-sm font-semibold tabular-nums text-slate-950">{formatCurrency(person.total)}</p>
+                        <div className="text-right">
+                          <p className="text-[11px] font-medium text-slate-500">Sales</p>
+                          <p className="text-sm font-semibold tabular-nums text-slate-950">{formatCurrency(person.total)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[11px] font-medium text-slate-500">Outstanding credit · {creditRatio.toFixed(1)}%</p>
+                          <p className="text-sm font-semibold tabular-nums text-amber-700">{formatCurrency(person.creditOutstanding)}</p>
+                        </div>
                       </div>
                     );
                   })}
