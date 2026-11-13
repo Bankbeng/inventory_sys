@@ -284,9 +284,6 @@ export default function TransactionsPage() {
     return attributes ? `${product.product_name} (${attributes})` : product.product_name;
   };
 
-  const getProductUnit = (productId: number): string =>
-    products.find((product) => product.product_id === productId)?.unit ?? "";
-
   const getStockQuantity = (productId: number, quantity: number): string => {
     const product = products.find((item) => item.product_id === productId);
     return formatStockQuantity(quantity, product?.size ?? "", product?.unit ?? "");
@@ -489,7 +486,7 @@ export default function TransactionsPage() {
                             <span className="font-semibold text-slate-800">{getProductName(detail.product_id)}</span>
                             <span className="text-sm font-medium text-slate-700 sm:text-right">
                               <span className="text-indigo-700">
-                                {detail.quantity_sold}{getProductUnit(detail.product_id) ? ` ${getProductUnit(detail.product_id)}` : ""}
+                                {getStockQuantity(detail.product_id, detail.quantity_sold)}
                               </span>
                               {" × "}{formatCurrency(Number(detail.sold_at_price))} ={" "}
                               <span className="font-semibold text-slate-900">{formatCurrency(Number(detail.quantity_sold) * Number(detail.sold_at_price))}</span>
