@@ -237,7 +237,7 @@ textarea {
 
 .invoice-items th,
 .invoice-items td {
-  border-bottom: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   padding: 0.55rem 0.35rem;
   text-align: right;
   vertical-align: top;
@@ -370,7 +370,7 @@ textarea {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm;
+    margin: 6mm;
   }
 
   body:has(.invoice-overlay) {
@@ -436,8 +436,22 @@ textarea {
   }
 
   .invoice-order-details {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
     gap: 0.75rem;
     margin-top: 0.6rem;
+  }
+
+  .invoice-meta {
+    gap: 0.35rem 0.5rem;
+  }
+
+  .invoice-meta dt {
+    font-size: 6.5pt;
+  }
+
+  .invoice-meta dd {
+    font-size: 7.5pt;
+    overflow-wrap: anywhere;
   }
 
   .invoice-items {
@@ -451,23 +465,45 @@ textarea {
   .invoice-items {
     table-layout: fixed;
     min-width: 0;
-    font-size: 8pt;
+    font-size: 7.5pt;
+  }
+
+  .invoice-items thead {
+    display: table-header-group;
+  }
+
+  .invoice-items tfoot {
+    display: table-row-group;
+  }
+
+  .invoice-items tr {
+    break-inside: avoid;
   }
 
   .invoice-items th,
   .invoice-items td {
+    padding: 2pt;
+  }
+
+  .invoice-items td:nth-child(2) {
     overflow-wrap: anywhere;
-    padding: 2pt 1pt;
+  }
+
+  .invoice-quantity-pack,
+  .invoice-quantity-total {
+    white-space: normal;
   }
 
   .invoice-summary {
     margin-top: 0.4rem;
+    break-inside: avoid;
   }
 
   .invoice-remarks {
     margin-top: 0.5rem;
     font-size: 7pt;
     line-height: 1.2;
+    break-inside: avoid;
   }
 
   .invoice-remarks ol,
@@ -504,19 +540,19 @@ textarea {
   }
 
   .invoice-items th:nth-child(2) {
-    width: 28%;
+    width: 23%;
   }
 
   .invoice-items th:nth-child(3) {
-    width: 14%;
+    width: 11%;
   }
 
   .invoice-items th:nth-child(4) {
-    width: 9%;
+    width: 8%;
   }
 
   .invoice-items th:nth-child(5) {
-    width: 6%;
+    width: 10%;
   }
 
   .invoice-items th:nth-child(6) {
@@ -524,11 +560,11 @@ textarea {
   }
 
   .invoice-items th:nth-child(7) {
-    width: 14%;
+    width: 16%;
   }
 
   .invoice-items th:nth-child(8) {
-    width: 18%;
+    width: 21%;
   }
 }
 
